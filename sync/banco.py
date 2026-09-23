@@ -157,3 +157,41 @@ def titulares_por_processo(sb) -> dict[str, list[dict]]:
     for linha in (r.data or []):
         mapa.setdefault(linha["processo_id"], []).append(linha)
     return mapa
+
+
+def etapas_atuais(sb) -> dict[tuple[str, int], dict]:
+    """(processo_id, etapa_id) -> estado atual da etapa.
+
+    É contra isto que o sync compara para decidir o que mudou. Sem esta
+    leitura não há como gravar histórico só na mudança, e gravar a cada
+    execução estouraria o plano free em poucos meses.
+    """
+    mapa: dict[tuple[str, int], dict] = {}
+    inicio, tamanho = 0, 1000
+    while True:
+        r = (sb.table("processo_etapas")
+               .select("processo_id, etapa_id, status, desde")
+               .range(inicio, inicio + tamanho - 1)
+               .execute())
+        linhas = r.data or []
+        for l in linhas:
+            mapa[(l["processo_id"], l["etapa_id"])] = l
+        if len(linhas) < tamanho:
+            break
+        inicio += tamanho
+    return mapa
+
+
+def desativar_processo(sb, processo_id: str) -> None:
+    """Soft delete. NUNCA apagar: sumir da planilha pode ser reestruturação."""
+    sb.table("processos").update({"ativo": False}).eq("id", processo_id).execute()
+
+
+def marcar_visto(sb, processo_ids: list[str]) -> None:
+    """Registra que estes processos apareceram na planilha nesta execução."""
+    if not processo_ids:
+        return
+    from datetime import datetime, timezone
+    agora = datetime.now(timezone.utc).isoformat()
+    for pid in processo_ids:
+        sb.table("processos").update({"visto_em": agora}).eq("id", pid).execute()

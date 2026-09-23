@@ -1,0 +1,121 @@
+# Royal Imóveis — sincronização planilha -> banco
+#
+# ESTADO: manual apenas. O agendamento está comentado de propósito.
+#
+# O sync só funciona com a planilha no Excel Online, que depende do registro
+# de app no Azure AD com Files.ReadWrite.All e consentimento de admin do
+# tenant. Enquanto isso não existir, a fonte é o arquivo local, que não está
+# no repositório — e não deve estar, porque tem dados de 15 compradores.
+#
+# Ligar o cron antes disso criaria uma execução falhando a cada 15 minutos.
+# Além do ruído, treina todo mundo a ignorar a notificação de falha, que é
+# justamente o aviso que precisa funcionar quando o secret do Azure expirar.
+#
+# PARA LIGAR, quando o Excel Online estiver disponível:
+#   1. descomente o bloco `schedule` abaixo
+#   2. cadastre os secrets em Settings -> Secrets and variables -> Actions:
+#        SUPABASE_URL
+#        SUPABASE_SERVICE_ROLE_KEY
+#        AZURE_TENANT_ID
+#        AZURE_CLIENT_ID
+#        AZURE_CLIENT_SECRET
+#        EXCEL_DRIVE_ID
+#        EXCEL_ITEM_ID
+#   3. mude FONTE_PLANILHA para excel_online na seção `env`
+#   4. implemente FonteExcelOnline em sync/fontes.py
+#
+# Benefício colateral do cron: projeto free do Supabase pausa após uma semana
+# sem atividade. Uma execução a cada 15 minutos mantém o banco acordado.
+
+name: Sincronizar planilha
+
+on:
+  workflow_dispatch:
+    inputs:
+      aplicar:
+        description: "Gravar no banco (desmarcado apenas simula)"
+        type: boolean
+        default: false
+      forcar:
+        description: "Ignorar a guarda de sanidade"
+        type: boolean
+        default: false
+
+  # schedule:
+  #   - cron: "*/15 * * * *"
+
+concurrency:
+  # Duas execuções simultâneas comparariam o mesmo estado e gravariam histórico
+  # duplicado. A segunda espera; nenhuma é cancelada no meio de uma escrita.
+  group: sincronizar
+  cancel-in-progress: false
+
+jobs:
+  sincronizar:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    env:
+      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      # Trocar para excel_online quando a fonte estiver implementada.
+      FONTE_PLANILHA: excel_online
+      AZURE_TENANT_ID: ${{ secrets.AZURE_TENANT_ID }}
+      AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+      AZURE_CLIENT_SECRET: ${{ secrets.AZURE_CLIENT_SECRET }}
+      EXCEL_DRIVE_ID: ${{ secrets.EXCEL_DRIVE_ID }}
+      EXCEL_ITEM_ID: ${{ secrets.EXCEL_ITEM_ID }}
+
+      # Chave para desligar sem mexer no código: defina a variável de
+      # repositório SYNC_HABILITADO como 0 durante uma reestruturação da
+      # planilha (Settings -> Secrets and variables -> Actions -> Variables).
+      SYNC_HABILITADO: ${{ vars.SYNC_HABILITADO || '1' }}
+      LIMITE_MUDANCA_EM_MASSA: ${{ vars.LIMITE_MUDANCA_EM_MASSA || '0.30' }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Instalar dependências
+        run: pip install -r requirements.txt
+
+      - name: Conferir que os secrets existem
+        # Falha com mensagem clara em vez de deixar o script quebrar por
+        # variável vazia, que é um erro bem mais difícil de ler no log.
+        run: |
+          faltando=""
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY; do
+            [ -z "${!v}" ] && faltando="$faltando $v"
+          done
+          if [ -n "$faltando" ]; then
+            echo "::error::Secrets ausentes:$faltando"
+            exit 1
+          fi
+
+      - name: Sincronizar
+        run: |
+          args=""
+          if [ "${{ inputs.aplicar }}" = "true" ] || [ "${{ github.event_name }}" = "schedule" ]; then
+            args="--aplicar"
+          fi
+          if [ "${{ inputs.forcar }}" = "true" ]; then
+            args="$args --forcar"
+          fi
+          echo "Executando: python sincronizar.py $args"
+          python sincronizar.py $args
+
+      # Código de saída 2 é a guarda de sanidade, não uma falha de
+      # infraestrutura. O job falha de propósito, para a notificação chegar —
+      # é o aviso de que algo grande mudou na planilha e ninguém avisou.
+      - name: Explicar a falha
+        if: failure()
+        run: |
+          echo "::warning::Sincronização não concluída. Saída 2 = guarda de sanidade"
+          echo "(mudança em massa, processo sumido ou uid desconhecido)."
+          echo "Confira o log acima e, se a mudança for legítima, rode este"
+          echo "workflow manualmente com 'forcar' marcado."
