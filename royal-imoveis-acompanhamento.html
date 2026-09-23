@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Royal Imóveis · Acompanhamento de Transação</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    color-scheme: light dark;
+    --bg:#F6F2E9;
+    --surface:#FFFFFF;
+    --panel:#EFE8D8;
+    --panel-line:#E1D6BC;
+    --ink:#26221A;
+    --ink-soft:#6E6455;
+    --ink-faint:#9A907C;
+    --border:#DED2B4;
+    --accent:#8A6425;
+    --accent-deep:#5B4319;
+    --accent-soft:#E9DCC0;
+    --ok:#3E7A50;
+    --ok-bg:#E4EFE3;
+    --warn:#B4791E;
+    --warn-bg:#F6EAD3;
+    --bad:#AC4430;
+    --bad-bg:#F5E1DA;
+    --idle:#A79C87;
+    --idle-bg:#EFEAE0;
+    --shadow: 0 1px 2px rgba(38,34,26,.06), 0 8px 24px -12px rgba(38,34,26,.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1B1811;
+      --surface:#221E16;
+      --panel:#2A251B;
+      --panel-line:#3A3323;
+      --ink:#EFE8D8;
+      --ink-soft:#B6AB93;
+      --ink-faint:#867A63;
+      --border:#3A3323;
+      --accent:#D8AE63;
+      --accent-deep:#EFCB8C;
+      --accent-soft:#3A311F;
+      --ok:#7FBE8F;
+      --ok-bg:#233327;
+      --warn:#E0AC53;
+      --warn-bg:#382C18;
+      --bad:#E38468;
+      --bad-bg:#3A241D;
+      --idle:#8C8067;
+      --idle-bg:#2A2619;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1B1811;
+    --surface:#221E16;
+    --panel:#2A251B;
+    --panel-line:#3A3323;
+    --ink:#EFE8D8;
+    --ink-soft:#B6AB93;
+    --ink-faint:#867A63;
+    --border:#3A3323;
+    --accent:#D8AE63;
+    --accent-deep:#EFCB8C;
+    --accent-soft:#3A311F;
+    --ok:#7FBE8F;
+    --ok-bg:#233327;
+    --warn:#E0AC53;
+    --warn-bg:#382C18;
+    --bad:#E38468;
+    --bad-bg:#3A241D;
+    --idle:#8C8067;
+    --idle-bg:#2A2619;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:"Inter",system-ui,sans-serif;
+    padding-inline:20px;
+    padding-block: 28px 60px;
+    min-height:100%;
+  }
+  .wrap{max-width:1080px;margin:0 auto;}
+
+  /* ---------- header ---------- */
+  .topbar{
+    display:flex;justify-content:space-between;align-items:flex-start;
+    gap:24px;flex-wrap:wrap;
+    padding-bottom:22px;margin-bottom:26px;
+    border-bottom:1px solid var(--border);
+  }
+  .heading .eyebrow{
+    font-family:"IBM Plex Mono",monospace;
+    font-size:11.5px;font-weight:600;letter-spacing:.14em;
+    text-transform:uppercase;color:var(--accent);
+    margin:0 0 10px;
+  }
+  .heading h1{
+    font-family:"Fraunces",serif;
+    font-size:clamp(28px,4.2vw,42px);
+    font-weight:500;line-height:1.08;margin:0 0 10px;
+    text-wrap:balance;
+  }
+  .heading .meta{
+    font-size:14.5px;color:var(--ink-soft);margin:0;line-height:1.6;
+  }
+  .heading .meta b{color:var(--ink);font-weight:600;}
+  .brand{
+    display:flex;flex-direction:column;align-items:center;gap:4px;flex-shrink:0;
+    padding-top:2px;
+  }
+  .brand svg{width:34px;height:26px;flex-shrink:0;}
+  .brand-text{font-family:"Fraunces",serif;line-height:1.1;text-align:center;}
+  .brand-text .r1{font-size:20px;font-weight:600;color:var(--ink);letter-spacing:.03em;display:block;}
+  .brand-text .r2{font-size:10px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;font-family:"IBM Plex Mono",monospace;font-weight:600;display:block;margin-top:1px;}
+
+  /* ---------- progress strip ---------- */
+  .progress-row{
+    display:flex;align-items:center;gap:16px;margin-bottom:30px;flex-wrap:wrap;
+  }
+  .progress-track{
+    flex:1 1 220px;height:8px;border-radius:99px;background:var(--panel);
+    border:1px solid var(--panel-line);overflow:hidden;
+  }
+  .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease;}
+  .progress-label{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-soft);
+    white-space:nowrap;font-variant-numeric:tabular-nums;
+  }
+
+  /* ---------- category grid ---------- */
+  .grid{
+    display:grid;grid-template-columns:repeat(3,1fr);gap:18px;
+  }
+  @media (max-width:820px){ .grid{grid-template-columns:repeat(2,1fr);} }
+  @media (max-width:560px){ .grid{grid-template-columns:1fr;} }
+
+  .card{
+    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    padding:18px 18px 16px;box-shadow:var(--shadow);
+  }
+  .card-head{
+    display:flex;justify-content:space-between;align-items:baseline;
+    margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--panel-line);
+  }
+  .card-head h2{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;
+    letter-spacing:.09em;text-transform:uppercase;color:var(--ink);margin:0;
+  }
+  .card-head span{
+    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+    font-variant-numeric:tabular-nums;
+  }
+  .items{display:flex;flex-direction:column;gap:9px;}
+  .item{display:flex;align-items:flex-start;gap:9px;}
+  .item .box{
+    width:16px;height:16px;border-radius:5px;flex-shrink:0;margin-top:2px;
+    display:flex;align-items:center;justify-content:center;
+    border:1.5px solid var(--idle);
+  }
+  .item .box svg{width:10px;height:10px;display:none;}
+  .item.st-done .box{background:var(--ok);border-color:var(--ok);}
+  .item.st-done .box svg{display:block;stroke:var(--surface);}
+  .item.st-progress .box{border-color:var(--warn);background:var(--warn-bg);}
+  .item.st-progress .box::after{content:"";width:7px;height:7px;border-radius:99px;background:var(--warn);}
+  .item.st-pending .box{border-color:var(--warn);}
+  .item.st-late .box{border-color:var(--bad);background:var(--bad-bg);}
+  .item.st-late .box::after{content:"";width:7px;height:7px;border-radius:99px;background:var(--bad);}
+  .item.st-cancel .box{border-color:var(--ink-faint);background:var(--idle-bg);}
+  .item .label{font-size:13.5px;line-height:1.45;color:var(--ink);}
+  .item.st-idle .label{color:var(--ink-faint);}
+  .item.st-cancel .label{color:var(--ink-faint);text-decoration:line-through;}
+  .item .tag{
+    display:inline-block;margin-left:7px;padding:1px 7px;border-radius:99px;
+    font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
+    letter-spacing:.03em;vertical-align:middle;white-space:nowrap;
+  }
+  .item.st-progress .tag{background:var(--warn-bg);color:var(--warn);}
+  .item.st-pending .tag{background:var(--warn-bg);color:var(--warn);}
+  .item.st-late .tag{background:var(--bad-bg);color:var(--bad);}
+
+  /* ---------- legend / footer ---------- */
+  .legend{
+    display:flex;flex-wrap:wrap;gap:16px;margin-top:26px;padding-top:18px;
+    border-top:1px solid var(--border);
+  }
+  .legend .lg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);}
+  .legend .dot{width:10px;height:10px;border-radius:4px;flex-shrink:0;}
+  .foot{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    margin-top:14px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+  }
+  .foot button{
+    font:inherit;background:none;border:1px solid var(--border);color:var(--ink-soft);
+    padding:5px 11px;border-radius:99px;cursor:pointer;
+  }
+  .foot button:hover{border-color:var(--accent);color:var(--accent);}
+  .foot button:focus-visible, a:focus-visible, input:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+
+  /* ---------- states ---------- */
+  .state{padding:60px 20px;text-align:center;color:var(--ink-soft);}
+  .state h2{font-family:"Fraunces",serif;font-weight:500;color:var(--ink);font-size:22px;margin:0 0 8px;}
+  .state p{font-size:14px;max-width:420px;margin:0 auto;}
+
+  /* ---------- directory (index mode) ---------- */
+  .search{
+    width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);
+    background:var(--surface);color:var(--ink);font:inherit;font-size:14px;margin-bottom:18px;
+  }
+  .dir-list{display:flex;flex-direction:column;gap:8px;}
+  .dir-row{
+    display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    padding:13px 16px;text-decoration:none;color:inherit;box-shadow:var(--shadow);
+  }
+  .dir-row:hover{border-color:var(--accent);}
+  .dir-main b{font-size:14.5px;font-weight:600;}
+  .dir-main div{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
+  .dir-badge{
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.05em;
+    text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent-deep);
+    white-space:nowrap;
+  }
+</style>
+</head>
+<body>
+<div class="wrap" id="app">
+  <div class="state"><h2>Carregando…</h2><p>Buscando os dados mais recentes da planilha Royal Imóveis.</p></div>
+</div>
+
+<script>
+(function(){
+  // ATENCAO: referencia visual apenas.
+  //
+  // Este arquivo foi o prototipo do projeto. Ele NAO e o site: a versao real
+  // le do Supabase com login por cliente. O que vale aqui e o visual —
+  // paleta, tipografia, cards, barra de progresso — que a fase 2 reaproveita.
+  //
+  // Os dados abaixo sao ficticios. A versao original trazia embutidos os nomes,
+  // imoveis e corretores de 13 compradores reais, mais o ID da planilha do
+  // Google, e por isso ficou fora do versionamento ate esta limpeza.
+  //
+  // As etapas seguem a estrutura reestruturada em setembro/2026 (10 a vista,
+  // 9 financiado) e usam os rotulos PUBLICOS, que e o que o cliente le.
+
+  var FLOWS = [
+    { key:"avista", label:"À Vista" },
+    { key:"financiado", label:"Financiado" }
+  ];
+
+  var CATEGORY_DEFS = {
+    avista: [
+      { name:"Contrato", idx:[5,6] },
+      { name:"Sinal", idx:[7] },
+      { name:"Certidões e ITBI", idx:[8,9] },
+      { name:"Escritura", idx:[10,11] },
+      { name:"Registro", idx:[12,13] },
+      { name:"Entrega", idx:[14] }
+    ],
+    financiado: [
+      { name:"Contrato", idx:[5,6] },
+      { name:"Sinal", idx:[7] },
+      { name:"Certidões e ITBI", idx:[8,9] },
+      { name:"Financiamento", idx:[10] },
+      { name:"Registro", idx:[11,12] },
+      { name:"Entrega", idx:[13] }
+    ]
+  };
+
+  var STATUS_META = {
+    "concluído":   { cls:"st-done",     label:"Concluído" },
+    "em andamento":{ cls:"st-progress", label:"Em andamento" },
+    "pendente":    { cls:"st-pending",  label:"Pendente" },
+    "atrasado":    { cls:"st-late",     label:"Atrasado" },
+    "cancelado":   { cls:"st-cancel",   label:"Cancelado" },
+    "não iniciado":{ cls:"st-idle",     label:"" }
+  };
+
+  function slugify(s){
+    return (s || "").toString().normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .toLowerCase().trim().replace(/[^a-z0-9]+/g,"-").replace(/(^-+|-+$)/g,"");
+  }
+
+  function fmtTime(d){
+    return d.toLocaleString("pt-BR", { hour:"2-digit", minute:"2-digit", day:"2-digit", month:"2-digit" });
+  }
+
+  var MOCK = {
+    avista: {
+      header: ["ID","Data da Assinatura","Cliente","Imóvel / Empreendimento","Corretor",
+        "Preparação da minuta do contrato","Análise e quitação de ônus",
+        "Pagamento do sinal","Emissão de certidões","Emissão do ITBI",
+        "Documentação em análise no cartório","Agendamento da escritura",
+        "Escritura enviada para registro","Registro em andamento",
+        "Entrega da documentação final"],
+      rows: [
+        ["1","2026-06-01","Cliente Exemplo A","Residencial Modelo Bl 1 101","Corretor Exemplo",
+         "Concluído","Concluído","Concluído","Concluído","Concluído",
+         "Concluído","Em andamento","Não iniciado","Não iniciado","Não iniciado"],
+        ["2","2026-08-15","Cliente Exemplo B","Edifício Demonstração 802","Corretor Exemplo",
+         "Concluído","Concluído","Em andamento","Não iniciado","Não iniciado",
+         "Não iniciado","Não iniciado","Não iniciado","Não iniciado","Não iniciado"]
+      ]
+    },
+    financiado: {
+      header: ["ID","Data da Assinatura","Cliente","Imóvel / Empreendimento","Corretor",
+        "Preparação da minuta do contrato","Análise e quitação de ônus",
+        "Pagamento do sinal","Emissão de certidões","Emissão do ITBI",
+        "Aguardando contrato do banco","Contrato enviado para registro",
+        "Registro em andamento","Entrega da documentação final"],
+      rows: [
+        ["1","2026-07-10","Cliente Exemplo C","Condomínio Amostra Bl 3 405","Corretor Exemplo",
+         "Concluído","Concluído","Concluído","Concluído","Em andamento",
+         "Não iniciado","Não iniciado","Não iniciado","Não iniciado"]
+      ]
+    }
+  };
+
+  async function loadClients(){
+    var all = [];
+    for (var i = 0; i < FLOWS.length; i++){
+      var flow = FLOWS[i];
+      var dados = MOCK[flow.key];
+      for (var r = 0; r < dados.rows.length; r++){
+        var row = dados.rows[r];
+        all.push({
+          flow: flow.key,
+          flowLabel: flow.label,
+          id: row[0],
+          cliente: (row[2] || "").trim(),
+          imovel: (row[3] || "").trim(),
+          corretor: (row[4] || "").trim(),
+          header: dados.header,
+          row: row
+        });
+      }
+    }
+    return all;
+  }
+
+  function buildCategories(client){
+    var defs = CATEGORY_DEFS[client.flow];
+    return defs.map(function(def){
+      var items = def.idx.map(function(i){
+        var raw = (client.row[i] || "Não iniciado").trim();
+        var key = raw.toLowerCase();
+        var meta = STATUS_META[key] || { cls:"st-idle", label:raw };
+        return { text: client.header[i], status: raw, meta: meta };
+      });
+      var done = items.filter(function(it){ return it.meta.cls === "st-done"; }).length;
+      return { name: def.name, items: items, done: done, total: items.length };
+    });
+  }
+
+  function overallProgress(categories){
+    var done = 0, total = 0;
+    categories.forEach(function(c){ done += c.done; total += c.total; });
+    return { done: done, total: total, pct: total ? Math.round((done/total)*100) : 0 };
+  }
+
+  var BRAND_SVG = '<svg viewBox="0 0 48 36" xmlns="http://www.w3.org/2000/svg">'
+    + '<path d="M5 32 L5 15 L15 22.5 L24 8 L33 22.5 L43 15 L43 32 Z" fill="var(--accent)"/>'
+    + '<circle cx="5" cy="12.5" r="3.4" fill="var(--accent)"/>'
+    + '<circle cx="24" cy="6" r="3.8" fill="var(--accent)"/>'
+    + '<circle cx="43" cy="12.5" r="3.4" fill="var(--accent)"/>'
+    + '<rect x="5" y="31" width="38" height="4" rx="1.3" fill="var(--accent)"/>'
+    + '</svg>';
+
+  function brandBlock(){
+    return '<div class="brand">' + BRAND_SVG +
+      '<div class="brand-text"><span class="r1">ROYAL</span><span class="r2">Imóveis RJ</span></div></div>';
+  }
+
+  function checkSvg(){
+    return '<svg viewBox="0 0 10 10"><polyline points="1,5.2 4,8 9,1.5" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+  }
+
+  function renderClient(client, categories){
+    var prog = overallProgress(categories);
+    var app = document.getElementById("app");
+
+    var cardsHtml = categories.map(function(cat){
+      var itemsHtml = cat.items.map(function(it){
+        var tag = (it.meta.label && it.meta.cls !== "st-done" && it.meta.cls !== "st-idle")
+          ? '<span class="tag">' + it.meta.label + '</span>' : "";
+        return '<div class="item ' + it.meta.cls + '"><span class="box">' + (it.meta.cls === "st-done" ? checkSvg() : "") + '</span>'
+          + '<span class="label">' + it.text + tag + '</span></div>';
+      }).join("");
+      return '<div class="card"><div class="card-head"><h2>' + cat.name + '</h2>'
+        + '<span>' + cat.done + '/' + cat.total + '</span></div>'
+        + '<div class="items">' + itemsHtml + '</div></div>';
+    }).join("");
+
+    app.innerHTML =
+      '<div class="topbar">'
+        + '<div class="heading">'
+          + '<p class="eyebrow">Acompanhamento de transação</p>'
+          + '<h1>' + (client.imovel || client.cliente) + '</h1>'
+          + '<p class="meta">Cliente: <b>' + client.cliente + '</b> · Corretor responsável: <b>' + (client.corretor || "—") + '</b> · Modalidade: <b>' + client.flowLabel + '</b></p>'
+        + '</div>'
+        + brandBlock()
+      + '</div>'
+      + '<div class="progress-row">'
+        + '<div class="progress-track"><div class="progress-fill" style="width:' + prog.pct + '%"></div></div>'
+        + '<div class="progress-label">' + prog.done + ' de ' + prog.total + ' etapas concluídas · ' + prog.pct + '%</div>'
+      + '</div>'
+      + '<div class="grid">' + cardsHtml + '</div>'
+      + '<div class="legend">'
+        + '<div class="lg-item"><span class="dot" style="background:var(--ok)"></span>Concluído</div>'
+        + '<div class="lg-item"><span class="dot" style="background:var(--warn)"></span>Em andamento / pendente</div>'
+        + '<div class="lg-item"><span class="dot" style="background:var(--bad)"></span>Atrasado</div>'
+        + '<div class="lg-item"><span class="dot" style="border:1.5px solid var(--idle);background:transparent"></span>Não iniciado</div>'
+      + '</div>'
+      + '<div class="foot"><span id="updated-at"></span><button id="refresh-btn">Atualizar agora</button></div>';
+
+    document.getElementById("refresh-btn").addEventListener("click", function(){ boot(true); });
+    setUpdatedAt();
+  }
+
+  function setUpdatedAt(){
+    var el = document.getElementById("updated-at");
+    if (!el) return;
+    el.textContent = "Referência visual · dados fictícios · " + fmtTime(new Date());
+  }
+
+  function renderNotFound(name){
+    document.getElementById("app").innerHTML =
+      '<div class="topbar"><div class="heading"><p class="eyebrow">Acompanhamento de transação</p>'
+      + '<h1>Cliente não encontrado</h1>'
+      + '<p class="meta">Não localizamos "<b>' + name + '</b>" na planilha de controle.</p></div>' + brandBlock() + '</div>'
+      + '<div class="state"><p>Confira se o link está correto ou fale com seu corretor Royal Imóveis para receber o link atualizado.</p></div>';
+  }
+
+  function renderError(){
+    document.getElementById("app").innerHTML =
+      '<div class="topbar"><div class="heading"><p class="eyebrow">Acompanhamento de transação</p>'
+      + '<h1>Não foi possível carregar</h1>'
+      + '<p class="meta">Tente novamente em instantes.</p></div>' + brandBlock() + '</div>'
+      + '<div class="state"><button id="retry-btn" style="font:inherit;padding:9px 18px;border-radius:99px;border:1px solid var(--border);background:var(--surface);color:var(--ink);cursor:pointer;">Tentar novamente</button></div>';
+    var b = document.getElementById("retry-btn");
+    if (b) b.addEventListener("click", function(){ boot(true); });
+  }
+
+  function renderDirectory(clients){
+    var rows = clients.slice().sort(function(a,b){ return a.cliente.localeCompare(b.cliente, "pt-BR"); });
+    var app = document.getElementById("app");
+
+    function draw(filter){
+      var f = slugify(filter || "");
+      var visible = rows.filter(function(c){
+        return !f || slugify(c.cliente).indexOf(f) > -1 || slugify(c.imovel).indexOf(f) > -1;
+      });
+      var listHtml = visible.map(function(c){
+        var slug = slugify(c.cliente);
+        return '<a class="dir-row" href="?c=' + encodeURIComponent(slug) + '">'
+          + '<div class="dir-main"><b>' + c.cliente + '</b><div>' + (c.imovel || "—") + ' · ' + (c.corretor || "—") + '</div></div>'
+          + '<span class="dir-badge">' + c.flowLabel + '</span></a>';
+      }).join("") || '<p style="color:var(--ink-faint);font-size:13.5px;">Nenhum cliente encontrado.</p>';
+      document.getElementById("dir-list").innerHTML = listHtml;
+    }
+
+    app.innerHTML =
+      '<div class="topbar"><div class="heading"><p class="eyebrow">Painel interno · Royal Imóveis</p>'
+      + '<h1>Diretório de clientes</h1>'
+      + '<p class="meta">Cada cliente tem um link individual — use a busca para localizar e copiar o link certo.</p></div>' + brandBlock() + '</div>'
+      + '<input class="search" id="dir-search" type="text" placeholder="Buscar por cliente ou imóvel…">'
+      + '<div class="dir-list" id="dir-list"></div>'
+      + '<div class="foot"><span id="updated-at"></span><button id="refresh-btn">Atualizar agora</button></div>';
+
+    draw("");
+    document.getElementById("dir-search").addEventListener("input", function(e){ draw(e.target.value); });
+    document.getElementById("refresh-btn").addEventListener("click", function(){ boot(true); });
+    setUpdatedAt();
+  }
+
+  var AUTO_REFRESH_MS = 90000;
+  var timer = null;
+
+  async function boot(manual){
+    try{
+      var clients = await loadClients();
+      var params = new URLSearchParams(location.search);
+      var target = params.get("c") || params.get("cliente");
+      if (target){
+        var wanted = slugify(target);
+        var match = clients.find(function(c){ return slugify(c.cliente) === wanted; })
+          || clients.find(function(c){ return slugify(c.cliente).indexOf(wanted) > -1; });
+        if (match){
+          renderClient(match, buildCategories(match));
+        } else {
+          renderNotFound(target);
+        }
+      } else {
+        renderDirectory(clients);
+      }
+    } catch(e){
+      renderError();
+    } finally {
+      if (timer) clearTimeout(timer);
+      timer = setTimeout(function(){ boot(false); }, AUTO_REFRESH_MS);
+    }
+  }
+
+  boot(false);
+})();
+</script>
+</body>
+</html>

@@ -23,11 +23,6 @@ credenciais*.json
 ~$*
 dados/
 
-# PENDENTE DE DECISAO: o protótipo tem um FALLBACK_CSV com nome, imóvel e
-# corretor dos 13 clientes reais embutidos no código. Fora do Git até decidirmos
-# entre remover o bloco de dados (o valor do arquivo é o visual, não o fallback)
-# ou descartá-lo de vez na fase 2, quando a tela nova entrar.
-royal-imoveis-acompanhamento.html
 
 
 # ---------------------------------------------------------------------------
