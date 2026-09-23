@@ -1,0 +1,67 @@
+# Royal Imóveis — configuração do Netlify
+#
+# Publica APENAS a pasta site/. O resto do repositório — protótipo, migrações,
+# scripts de sync — não vai ao ar. Isso importa: o sync usa a service_role key
+# e nada dele deve ficar acessível pela web.
+
+[build]
+  publish = "site"
+  # Site estático, sem etapa de build. Nada para compilar, nada para quebrar.
+  command = ""
+
+[[headers]]
+  for = "/*"
+
+  [headers.values]
+    # A página não deve poder ser embutida em iframe de terceiros: sem isso,
+    # um site hostil poderia sobrepor a tela do cliente e capturar cliques.
+    X-Frame-Options = "DENY"
+
+    # Impede o navegador de adivinhar tipo de conteúdo e executar como script
+    # um arquivo servido como outra coisa.
+    X-Content-Type-Options = "nosniff"
+
+    # O acompanhamento tem o id do processo na URL. Sem isto, esse id vazaria
+    # no cabeçalho Referer ao carregar fontes de terceiros.
+    Referrer-Policy = "strict-origin-when-cross-origin"
+
+    Permissions-Policy = "camera=(), microphone=(), geolocation=(), payment=()"
+
+    # CSP
+    # ---
+    # script-src sem 'unsafe-inline' é o motivo de os scripts das páginas terem
+    # sido movidos para assets/: com esta regra, um <script> embutido não roda.
+    # É a defesa que sobra caso algum dia entre no DOM texto que eu não escapei.
+    #
+    # style-src mantém 'unsafe-inline' porque a barra de progresso usa
+    # style="width:N%" e os pontos da legenda usam cor inline. Risco baixo
+    # perto do de script.
+    #
+    # connect-src limita as chamadas ao projeto do Supabase. Se a chave
+    # vazasse, ela ainda não serviria para mandar dados a outro destino a
+    # partir desta página.
+    Content-Security-Policy = """
+      default-src 'self';
+      script-src 'self' https://cdn.jsdelivr.net;
+      style-src 'self' https://fonts.googleapis.com 'unsafe-inline';
+      font-src https://fonts.gstatic.com;
+      img-src 'self' data:;
+      connect-src 'self' https://hwskiimvcdrncmowxwvy.supabase.co wss://hwskiimvcdrncmowxwvy.supabase.co https://cdn.jsdelivr.net;
+      frame-ancestors 'none';
+      base-uri 'none';
+      form-action 'none';
+      object-src 'none'
+    """
+
+# config.js carrega a URL e a chave anon. Não é segredo, mas também não deve
+# ficar em cache longo: trocar de projeto exigiria esperar o cache expirar no
+# navegador de cada cliente.
+[[headers]]
+  for = "/config.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/assets/*"
+  [headers.values]
+    Cache-Control = "public, max-age=3600"
