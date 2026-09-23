@@ -1,0 +1,186 @@
+/* Royal Imóveis — estilos compartilhados
+ *
+ * Paleta e tipografia vêm do protótipo (royal-imoveis-acompanhamento.html),
+ * que segue sendo a referência visual do projeto.
+ */
+
+:root{
+  color-scheme: light dark;
+  --bg:#F6F2E9;
+  --surface:#FFFFFF;
+  --panel:#EFE8D8;
+  --panel-line:#E1D6BC;
+  --ink:#26221A;
+  --ink-soft:#6E6455;
+  --ink-faint:#9A907C;
+  --border:#DED2B4;
+  --accent:#8A6425;
+  --accent-deep:#5B4319;
+  --accent-soft:#E9DCC0;
+  --ok:#3E7A50;
+  --ok-bg:#E4EFE3;
+  --warn:#B4791E;
+  --warn-bg:#F6EAD3;
+  --bad:#AC4430;
+  --bad-bg:#F5E1DA;
+  --idle:#A79C87;
+  --idle-bg:#EFEAE0;
+  --shadow: 0 1px 2px rgba(38,34,26,.06), 0 8px 24px -12px rgba(38,34,26,.18);
+}
+
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#1B1811;
+    --surface:#221E16;
+    --panel:#2A251B;
+    --panel-line:#3A3323;
+    --ink:#EFE8D8;
+    --ink-soft:#B6AB93;
+    --ink-faint:#867A63;
+    --border:#3A3323;
+    --accent:#D8AE63;
+    --accent-deep:#EFCB8C;
+    --accent-soft:#3A311F;
+    --ok:#7FBE8F;
+    --ok-bg:#233327;
+    --warn:#E0AC53;
+    --warn-bg:#382C18;
+    --bad:#E38468;
+    --bad-bg:#3A241D;
+    --idle:#8C8067;
+    --idle-bg:#2A2619;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+  }
+}
+
+*{box-sizing:border-box;}
+html,body{margin:0;padding:0;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:"Inter",system-ui,sans-serif;
+  padding-inline:20px;
+  padding-block:28px 60px;
+  min-height:100%;
+}
+.wrap{max-width:1080px;margin:0 auto;}
+
+/* ---------- marca ---------- */
+.brand{display:flex;align-items:center;gap:11px;}
+.brand svg{width:44px;height:33px;display:block;}
+.brand-text{display:flex;flex-direction:column;line-height:1.05;}
+.brand .r1{
+  font-family:"Fraunces",serif;font-size:19px;font-weight:600;
+  letter-spacing:.16em;color:var(--accent-deep);
+}
+.brand .r2{
+  font-family:"IBM Plex Mono",monospace;font-size:9.5px;font-weight:600;
+  letter-spacing:.22em;text-transform:uppercase;color:var(--ink-faint);
+  margin-top:3px;
+}
+
+/* ---------- cartão central (login) ---------- */
+.centro{
+  min-height:70vh;display:flex;align-items:center;justify-content:center;
+}
+.cartao{
+  width:100%;max-width:420px;
+  background:var(--surface);
+  border:1px solid var(--border);
+  border-radius:16px;
+  padding:34px 32px 30px;
+  box-shadow:var(--shadow);
+}
+.cartao .brand{margin-bottom:26px;}
+.cartao h1{
+  font-family:"Fraunces",serif;
+  font-size:25px;font-weight:600;margin:0 0 8px;letter-spacing:-.01em;
+}
+.cartao p.sub{
+  font-size:14px;color:var(--ink-soft);margin:0 0 22px;line-height:1.55;
+}
+
+label{
+  display:block;font-size:12.5px;font-weight:600;color:var(--ink-soft);
+  margin-bottom:7px;letter-spacing:.01em;
+}
+input[type="email"]{
+  width:100%;font:inherit;font-size:15px;
+  padding:11px 13px;border-radius:9px;
+  border:1px solid var(--border);
+  background:var(--bg);color:var(--ink);
+}
+input[type="email"]:focus{
+  outline:none;border-color:var(--accent);
+  box-shadow:0 0 0 3px var(--accent-soft);
+}
+
+button{
+  font:inherit;font-size:14.5px;font-weight:600;
+  width:100%;margin-top:16px;padding:11px 18px;
+  border-radius:9px;border:1px solid var(--accent);
+  background:var(--accent);color:#fff;cursor:pointer;
+}
+button:hover:not(:disabled){background:var(--accent-deep);border-color:var(--accent-deep);}
+button:disabled{opacity:.55;cursor:default;}
+button.secundario{
+  background:var(--surface);color:var(--ink);
+  border-color:var(--border);width:auto;margin:0;
+  font-weight:500;padding:8px 15px;font-size:13.5px;
+}
+
+/* ---------- avisos ---------- */
+.aviso{
+  margin-top:18px;padding:12px 14px;border-radius:9px;
+  font-size:13.5px;line-height:1.55;border:1px solid transparent;
+}
+.aviso.ok   {background:var(--ok-bg);  color:var(--ok);  border-color:var(--ok);}
+.aviso.erro {background:var(--bad-bg); color:var(--bad); border-color:var(--bad);}
+.aviso[hidden]{display:none;}
+
+.rodape{
+  margin-top:24px;font-size:12px;color:var(--ink-faint);line-height:1.6;
+}
+
+/* ---------- topo das telas internas ---------- */
+.topbar{
+  display:flex;justify-content:space-between;align-items:flex-start;
+  gap:24px;flex-wrap:wrap;
+  padding-bottom:22px;margin-bottom:26px;
+  border-bottom:1px solid var(--border);
+}
+.heading .eyebrow{
+  font-family:"IBM Plex Mono",monospace;
+  font-size:11.5px;font-weight:600;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--accent);margin:0 0 10px;
+}
+.heading h1{
+  font-family:"Fraunces",serif;
+  font-size:30px;font-weight:600;margin:0 0 8px;letter-spacing:-.015em;
+}
+.heading .meta{font-size:13.5px;color:var(--ink-soft);margin:0;}
+
+/* ---------- lista de processos ---------- */
+.lista{display:flex;flex-direction:column;gap:10px;}
+.item-processo{
+  display:flex;justify-content:space-between;align-items:center;gap:16px;
+  padding:16px 18px;border-radius:12px;text-decoration:none;color:inherit;
+  background:var(--surface);border:1px solid var(--border);
+}
+.item-processo:hover{border-color:var(--accent);}
+.item-processo b{font-size:15px;font-weight:600;display:block;margin-bottom:4px;}
+.item-processo .detalhe{font-size:13px;color:var(--ink-soft);}
+.selo{
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;
+  letter-spacing:.1em;text-transform:uppercase;white-space:nowrap;
+  padding:5px 10px;border-radius:99px;
+  background:var(--accent-soft);color:var(--accent-deep);
+}
+
+.estado{
+  text-align:center;padding:48px 20px;color:var(--ink-soft);font-size:14px;
+}
+.estado h2{
+  font-family:"Fraunces",serif;font-size:21px;font-weight:600;
+  color:var(--ink);margin:0 0 8px;
+}
