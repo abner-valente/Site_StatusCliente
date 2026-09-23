@@ -52,10 +52,7 @@
 </div>
 
 <script type="module">
-// TODO endurecer: fixar a versão exata do supabase-js e adicionar integridade
-// (SRI) antes de colocar clientes reais. `@2` acompanha as versões menores,
-// o que é cômodo no desenvolvimento e indesejado em produção.
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { criarClienteRoyal } from "./assets/cliente.js";
 
 const cfg = window.ROYAL_CONFIG || {};
 const form     = document.getElementById("form-login");
@@ -73,12 +70,15 @@ function limpar(){
   avisoErr.hidden = true;
 }
 
-if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes("SEU_PROJECT_REF")
-    || !cfg.SUPABASE_ANON_KEY || cfg.SUPABASE_ANON_KEY.includes("COLE_AQUI")) {
+let sb;
+try {
+  sb = criarClienteRoyal(cfg);
+} catch (e) {
   botao.disabled = true;
-  mostrar(avisoErr, "Configuração pendente: preencha site/config.js com a URL do projeto e a chave anon.");
-} else {
-  const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+  mostrar(avisoErr, e.message);
+}
+
+if (sb) {
 
   // Quem já tem sessão válida não precisa ver esta tela.
   const { data: { session } } = await sb.auth.getSession();

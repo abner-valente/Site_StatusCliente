@@ -22,7 +22,7 @@
 // que supusesse um processo por login quebraria na primeira recompra.
 //
 // Com um imóvel só, ela redireciona direto para o acompanhamento.
-import { createClient } from "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
+import { criarClienteRoyal } from "./assets/cliente.js";
 
 const cfg = window.ROYAL_CONFIG || {};
 const app = document.getElementById("app");
@@ -48,10 +48,14 @@ function estado(titulo, texto){
   app.innerHTML = `<div class="estado"><h2>${esc(titulo)}</h2><p>${esc(texto)}</p></div>`;
 }
 
-if (!cfg.SUPABASE_URL || cfg.SUPABASE_URL.includes("SEU_PROJECT_REF")) {
-  estado("Configuração pendente", "Preencha site/config.js com a URL do projeto e a chave anon.");
-} else {
-  const sb = createClient(cfg.SUPABASE_URL, cfg.SUPABASE_ANON_KEY);
+let sb;
+try {
+  sb = criarClienteRoyal(cfg);
+} catch (e) {
+  estado("Não foi possível iniciar", e.message);
+}
+
+if (sb) {
 
   // O magic link volta com a sessão no fragmento da URL; o cliente do
   // Supabase a consome sozinho. getSession espera isso terminar.
