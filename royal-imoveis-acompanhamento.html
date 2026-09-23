@@ -6,76 +6,34 @@
 <title>Royal Imóveis · Acompanhamento de Transação</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
+  /* Paleta do site institucional royalimoveis.netlify.app. Valores lidos de
+     la, nao estimados. Só escuro, como o institucional. */
   :root{
-    color-scheme: light dark;
-    --bg:#F6F2E9;
-    --surface:#FFFFFF;
-    --panel:#EFE8D8;
-    --panel-line:#E1D6BC;
-    --ink:#26221A;
-    --ink-soft:#6E6455;
-    --ink-faint:#9A907C;
-    --border:#DED2B4;
-    --accent:#8A6425;
-    --accent-deep:#5B4319;
-    --accent-soft:#E9DCC0;
-    --ok:#3E7A50;
-    --ok-bg:#E4EFE3;
-    --warn:#B4791E;
-    --warn-bg:#F6EAD3;
-    --bad:#AC4430;
-    --bad-bg:#F5E1DA;
-    --idle:#A79C87;
-    --idle-bg:#EFEAE0;
-    --shadow: 0 1px 2px rgba(38,34,26,.06), 0 8px 24px -12px rgba(38,34,26,.18);
-  }
-  @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]){
-      --bg:#1B1811;
-      --surface:#221E16;
-      --panel:#2A251B;
-      --panel-line:#3A3323;
-      --ink:#EFE8D8;
-      --ink-soft:#B6AB93;
-      --ink-faint:#867A63;
-      --border:#3A3323;
-      --accent:#D8AE63;
-      --accent-deep:#EFCB8C;
-      --accent-soft:#3A311F;
-      --ok:#7FBE8F;
-      --ok-bg:#233327;
-      --warn:#E0AC53;
-      --warn-bg:#382C18;
-      --bad:#E38468;
-      --bad-bg:#3A241D;
-      --idle:#8C8067;
-      --idle-bg:#2A2619;
-      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
-    }
-  }
-  :root[data-theme="dark"]{
-    --bg:#1B1811;
-    --surface:#221E16;
-    --panel:#2A251B;
-    --panel-line:#3A3323;
-    --ink:#EFE8D8;
-    --ink-soft:#B6AB93;
-    --ink-faint:#867A63;
-    --border:#3A3323;
-    --accent:#D8AE63;
-    --accent-deep:#EFCB8C;
-    --accent-soft:#3A311F;
-    --ok:#7FBE8F;
-    --ok-bg:#233327;
-    --warn:#E0AC53;
-    --warn-bg:#382C18;
-    --bad:#E38468;
-    --bad-bg:#3A241D;
-    --idle:#8C8067;
-    --idle-bg:#2A2619;
-    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px -12px rgba(0,0,0,.5);
+    color-scheme: dark;
+    --navy-950:#060D18; --navy-900:#0A1626; --navy-800:#102640; --navy-700:#1C3557;
+    --cream:#F5F1E6;    --slate:#93A1B8;    --slate-dim:#7C8AA3;
+    --gold:#D4AF37;     --gold-light:#F0D778;
+
+    --bg:var(--navy-950);
+    --surface:var(--navy-900);
+    --panel:var(--navy-800);
+    --panel-line:var(--navy-700);
+    --ink:var(--cream);
+    --ink-soft:var(--slate);
+    --ink-faint:var(--slate-dim);
+    --border:var(--navy-800);
+    --accent:var(--gold);
+    --accent-deep:var(--gold-light);
+    --accent-soft:rgba(212,175,55,.12);
+
+    --ok:#4FB286;       --ok-bg:rgba(79,178,134,.12);
+    --warn:var(--gold); --warn-bg:var(--accent-soft);
+    --bad:#E0685C;      --bad-bg:rgba(224,104,92,.12);
+    --idle:var(--slate-dim); --idle-bg:rgba(147,161,184,.07);
+
+    --shadow: 0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
   }
 
   *{box-sizing:border-box;}
@@ -83,7 +41,7 @@
   body{
     background:var(--bg);
     color:var(--ink);
-    font-family:"Inter",system-ui,sans-serif;
+    font-family:"Manrope",system-ui,sans-serif;
     padding-inline:20px;
     padding-block: 28px 60px;
     min-height:100%;
@@ -98,7 +56,7 @@
     border-bottom:1px solid var(--border);
   }
   .heading .eyebrow{
-    font-family:"IBM Plex Mono",monospace;
+    font-family:"Manrope",sans-serif;
     font-size:11.5px;font-weight:600;letter-spacing:.14em;
     text-transform:uppercase;color:var(--accent);
     margin:0 0 10px;
@@ -120,7 +78,7 @@
   .brand svg{width:34px;height:26px;flex-shrink:0;}
   .brand-text{font-family:"Fraunces",serif;line-height:1.1;text-align:center;}
   .brand-text .r1{font-size:20px;font-weight:600;color:var(--ink);letter-spacing:.03em;display:block;}
-  .brand-text .r2{font-size:10px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;font-family:"IBM Plex Mono",monospace;font-weight:600;display:block;margin-top:1px;}
+  .brand-text .r2{font-size:10px;letter-spacing:.22em;color:var(--accent);text-transform:uppercase;font-family:"Manrope",sans-serif;font-weight:600;display:block;margin-top:1px;}
 
   /* ---------- progress strip ---------- */
   .progress-row{
@@ -132,7 +90,7 @@
   }
   .progress-fill{height:100%;background:var(--accent);border-radius:99px;transition:width .4s ease;}
   .progress-label{
-    font-family:"IBM Plex Mono",monospace;font-size:12.5px;color:var(--ink-soft);
+    font-family:"Manrope",sans-serif;font-size:12.5px;color:var(--ink-soft);
     white-space:nowrap;font-variant-numeric:tabular-nums;
   }
 
@@ -144,7 +102,7 @@
   @media (max-width:560px){ .grid{grid-template-columns:1fr;} }
 
   .card{
-    background:var(--surface);border:1px solid var(--border);border-radius:14px;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
     padding:18px 18px 16px;box-shadow:var(--shadow);
   }
   .card-head{
@@ -152,17 +110,17 @@
     margin-bottom:12px;padding-bottom:10px;border-bottom:1px solid var(--panel-line);
   }
   .card-head h2{
-    font-family:"IBM Plex Mono",monospace;font-size:12.5px;font-weight:600;
+    font-family:"Manrope",sans-serif;font-size:12.5px;font-weight:600;
     letter-spacing:.09em;text-transform:uppercase;color:var(--ink);margin:0;
   }
   .card-head span{
-    font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+    font-family:"Manrope",sans-serif;font-size:11.5px;color:var(--ink-faint);
     font-variant-numeric:tabular-nums;
   }
   .items{display:flex;flex-direction:column;gap:9px;}
   .item{display:flex;align-items:flex-start;gap:9px;}
   .item .box{
-    width:16px;height:16px;border-radius:5px;flex-shrink:0;margin-top:2px;
+    width:16px;height:16px;border-radius:3px;flex-shrink:0;margin-top:2px;
     display:flex;align-items:center;justify-content:center;
     border:1.5px solid var(--idle);
   }
@@ -180,7 +138,7 @@
   .item.st-cancel .label{color:var(--ink-faint);text-decoration:line-through;}
   .item .tag{
     display:inline-block;margin-left:7px;padding:1px 7px;border-radius:99px;
-    font-family:"IBM Plex Mono",monospace;font-size:10px;font-weight:600;
+    font-family:"Manrope",sans-serif;font-size:10px;font-weight:600;
     letter-spacing:.03em;vertical-align:middle;white-space:nowrap;
   }
   .item.st-progress .tag{background:var(--warn-bg);color:var(--warn);}
@@ -193,10 +151,10 @@
     border-top:1px solid var(--border);
   }
   .legend .lg-item{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--ink-soft);}
-  .legend .dot{width:10px;height:10px;border-radius:4px;flex-shrink:0;}
+  .legend .dot{width:10px;height:10px;border-radius:3px;flex-shrink:0;}
   .foot{
     display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-    margin-top:14px;font-family:"IBM Plex Mono",monospace;font-size:11.5px;color:var(--ink-faint);
+    margin-top:14px;font-family:"Manrope",sans-serif;font-size:11.5px;color:var(--ink-faint);
   }
   .foot button{
     font:inherit;background:none;border:1px solid var(--border);color:var(--ink-soft);
@@ -212,20 +170,20 @@
 
   /* ---------- directory (index mode) ---------- */
   .search{
-    width:100%;padding:12px 14px;border-radius:10px;border:1px solid var(--border);
+    width:100%;padding:12px 14px;border-radius:3px;border:1px solid var(--border);
     background:var(--surface);color:var(--ink);font:inherit;font-size:14px;margin-bottom:18px;
   }
   .dir-list{display:flex;flex-direction:column;gap:8px;}
   .dir-row{
     display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
-    background:var(--surface);border:1px solid var(--border);border-radius:12px;
+    background:var(--surface);border:1px solid var(--border);border-radius:6px;
     padding:13px 16px;text-decoration:none;color:inherit;box-shadow:var(--shadow);
   }
   .dir-row:hover{border-color:var(--accent);}
   .dir-main b{font-size:14.5px;font-weight:600;}
   .dir-main div{font-size:12.5px;color:var(--ink-soft);margin-top:2px;}
   .dir-badge{
-    font-family:"IBM Plex Mono",monospace;font-size:10.5px;font-weight:600;letter-spacing:.05em;
+    font-family:"Manrope",sans-serif;font-size:10.5px;font-weight:600;letter-spacing:.05em;
     text-transform:uppercase;padding:3px 9px;border-radius:99px;background:var(--accent-soft);color:var(--accent-deep);
     white-space:nowrap;
   }
