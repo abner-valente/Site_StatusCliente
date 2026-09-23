@@ -145,3 +145,15 @@ def vincular_titulares_pendentes(sb) -> int:
     """
     r = sb.rpc("vincular_titulares_pendentes").execute()
     return r.data if isinstance(r.data, int) else 0
+
+
+def titulares_por_processo(sb) -> dict[str, list[dict]]:
+    """processo_id -> titulares já cadastrados.
+
+    Serve para o gerador da aba Titulares não propor de novo quem já existe.
+    """
+    r = sb.table("titulares").select("id, processo_id, nome, email").execute()
+    mapa: dict[str, list[dict]] = {}
+    for linha in (r.data or []):
+        mapa.setdefault(linha["processo_id"], []).append(linha)
+    return mapa

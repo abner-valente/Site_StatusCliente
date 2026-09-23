@@ -70,3 +70,6 @@ tmp/
 
 # Saida da carga inicial: lista de uids para colar na planilha
 uids_para_colar.txt
+
+# Saida do gerador: nomes, imoveis e e-mails de clientes
+titulares_para_colar.csv
