@@ -1,0 +1,20 @@
+# Royal Imóveis — dependências do sync
+#
+#   python -m venv .venv
+#   .venv\Scripts\activate
+#   pip install -r requirements.txt
+
+# Leitura do .xlsx local (fase 0)
+openpyxl==3.1.5
+
+# Acesso ao Supabase pela API REST, em HTTPS.
+# Escolhido por causa do firewall da rede da Royal, que bloqueia as portas
+# 5432 e 6543 — conexão Postgres direta não é possível de dentro do escritório.
+supabase==2.10.0
+
+# Leitura do .env
+python-dotenv==1.0.1
+
+# Fase 3 — Microsoft Graph. Descomentar quando o Azure AD estiver liberado.
+# msal==1.31.1
+# requests==2.32.3

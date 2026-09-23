@@ -1,0 +1,69 @@
+# ---------------------------------------------------------------------------
+# Segredos — nunca versionar
+# ---------------------------------------------------------------------------
+# A service_role key do Supabase ignora RLS e GRANT: quem a tiver lê e escreve
+# tudo, de qualquer lugar. Ela vive só no .env local e, na fase 3, nos secrets
+# do GitHub Actions.
+.env
+.env.*
+!.env.example
+*.key
+*.pem
+credenciais*.json
+
+
+# ---------------------------------------------------------------------------
+# Dados de cliente — ver DECISAO_DADOS.md
+# ---------------------------------------------------------------------------
+# A planilha tem nome, imóvel, corretor e data de assinatura de 15 compradores
+# reais. Uma vez commitado e enviado, o arquivo fica no histórico do Git para
+# sempre — apagar depois não o remove. Fora por padrão.
+*.xlsx
+*.xls
+~$*
+dados/
+
+# PENDENTE DE DECISAO: o protótipo tem um FALLBACK_CSV com nome, imóvel e
+# corretor dos 13 clientes reais embutidos no código. Fora do Git até decidirmos
+# entre remover o bloco de dados (o valor do arquivo é o visual, não o fallback)
+# ou descartá-lo de vez na fase 2, quando a tela nova entrar.
+royal-imoveis-acompanhamento.html
+
+
+# ---------------------------------------------------------------------------
+# Supabase CLI
+# ---------------------------------------------------------------------------
+supabase/.temp/
+supabase/.branches/
+
+
+# ---------------------------------------------------------------------------
+# Python
+# ---------------------------------------------------------------------------
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+
+# ---------------------------------------------------------------------------
+# Sistema e editores
+# ---------------------------------------------------------------------------
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
+*.swp
+
+
+# ---------------------------------------------------------------------------
+# Saída local
+# ---------------------------------------------------------------------------
+*.log
+saida/
+tmp/
