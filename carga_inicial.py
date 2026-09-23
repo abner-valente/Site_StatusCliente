@@ -2,19 +2,29 @@
 """Carga inicial: leva a planilha para o banco pela primeira vez.
 
     python carga_inicial.py             # simula, não grava nada
-    python carga_inicial.py --aplicar   # grava de verdade
+    python carga_inicial.py --aplicar   # grava no banco
 
-Simula por padrão de propósito. A primeira execução real carimba a coluna
-uid_royal na planilha e cria os processos no banco — vale olhar o plano antes.
+Simula por padrão de propósito: vale olhar o plano antes da primeira execução
+real.
+
+Por que o script NÃO escreve na planilha local
+----------------------------------------------
+O openpyxl não preserva validação de dados ao salvar — ele avisa isso ao abrir
+o arquivo. Carimbar o uid_royal por ali destruiria as listas suspensas de
+status que vêm da aba `Listas`. O time passaria a digitar status livre e a
+normalização do sync quebraria.
+
+Então, com fonte local, o script grava no banco e gera `uids_para_colar.txt`
+para você colar a coluna no Excel, que preserva tudo.
+
+Na fase 3 isso deixa de existir: o Graph API edita a célula sem reescrever o
+arquivo, e o carimbo volta a ser automático.
 
 Ordem de escrita, que NÃO deve ser invertida
 --------------------------------------------
-1. carimba o uid na planilha
-2. grava no banco
-
-Se o passo 2 falhar, a planilha já tem o uid e a próxima execução reaproveita.
-Na ordem inversa, uma falha no carimbo faria a execução seguinte gerar uids
-novos e criar processos duplicados.
+O uid precisa chegar à planilha. Enquanto ele não estiver lá, uma nova execução
+não reconhece as linhas e criaria processos duplicados. Por isso o script
+insiste no aviso ao final: colar a coluna faz parte da carga, não é opcional.
 """
 
 from __future__ import annotations
@@ -27,11 +37,13 @@ from dotenv import load_dotenv
 
 from sync import banco, fontes, planilha
 
+ARQUIVO_UIDS = "uids_para_colar.txt"
+
 
 def principal() -> int:
     ap = argparse.ArgumentParser(description="Carga inicial da planilha para o Supabase.")
     ap.add_argument("--aplicar", action="store_true",
-                    help="grava de verdade; sem esta flag apenas simula")
+                    help="grava no banco; sem esta flag apenas simula")
     args = ap.parse_args()
 
     load_dotenv()
@@ -48,6 +60,9 @@ def principal() -> int:
         print(f"ERRO DE CONFIGURAÇÃO\n{e}", file=sys.stderr)
         return 1
 
+    # Fonte local não aceita escrita segura; ver docstring do módulo.
+    fonte_local = isinstance(fonte, fontes.FonteXlsxLocal)
+
     existentes = banco.processos_por_uid(sb)
     if existentes:
         print(f"Aviso: o banco já tem {len(existentes)} processo(s). "
@@ -55,6 +70,7 @@ def principal() -> int:
 
     total_novos = 0
     total_etapas = 0
+    blocos_uid: list[tuple[str, str, int, list[str]]] = []
 
     for aba, modalidade in planilha.ABAS_FLUXO.items():
         print(f"--- {aba} ({modalidade}) ---")
@@ -70,14 +86,15 @@ def principal() -> int:
         linha_cab = planilha.linha_cabecalho_numero(fonte, aba)
 
         if not uid_existe:
-            print(f"  coluna {planilha.COLUNA_UID} ausente; será criada em {col_uid}{linha_cab}")
-            if args.aplicar:
-                fonte.escrever_celula(aba, linha_cab, col_uid, planilha.COLUNA_UID)
+            print(f"  coluna {planilha.COLUNA_UID} ausente; lugar dela: {col_uid}{linha_cab}")
+
+        uids_desta_aba: list[str] = []
 
         for p in linhas:
             novo = p.uid is None
             if novo:
                 p.uid = str(uuid.uuid4())
+            uids_desta_aba.append(p.uid)
 
             concluidas = sum(1 for s in p.etapas.values() if s == "concluido")
             marca = "novo" if novo else "existente"
@@ -89,11 +106,9 @@ def principal() -> int:
                 total_etapas += len(p.etapas)
                 continue
 
-            # 1. carimbo na planilha, antes do banco
-            if novo:
+            if not fonte_local and novo:
                 fonte.escrever_celula(aba, p.numero_linha, col_uid, p.uid)
 
-            # 2. banco
             proc = banco.gravar_processo(sb, {
                 "uid_planilha": p.uid,
                 "modalidade": p.modalidade,
@@ -128,16 +143,16 @@ def principal() -> int:
             total_novos += 1 if novo else 0
             total_etapas += len(etapas_reg)
 
+        blocos_uid.append((aba, col_uid, linha_cab, uids_desta_aba))
         print()
 
     # --- titulares -------------------------------------------------------
+    print(f"--- {planilha.ABA_TITULARES} ---")
     titulares = planilha.ler_titulares(fonte)
     if not titulares:
-        print(f"--- {planilha.ABA_TITULARES} ---")
         print("  aba ausente ou vazia — nenhum acesso de cliente será criado.")
-        print("  Sem ela ninguém consegue logar: é o item bloqueante da fase 1.\n")
+        print("  Sem ela ninguém consegue logar: é o item bloqueante da fase 1.")
     else:
-        print(f"--- {planilha.ABA_TITULARES} ---")
         print(f"  {len(titulares)} titular(es) na planilha")
         if args.aplicar:
             uid_para_id = {
@@ -158,14 +173,61 @@ def principal() -> int:
             for t in orfaos:
                 print(f"  AVISO: uid_processo {t.uid_processo!r} de {t.email} "
                       f"não existe no banco — titular ignorado")
-        print()
+    print()
+
+    # --- arquivo de uids -------------------------------------------------
+    if args.aplicar and fonte_local:
+        _escrever_arquivo_uids(blocos_uid)
 
     print("=== Resumo ===")
     print(f"processos novos : {total_novos}")
     print(f"etapas gravadas : {total_etapas}")
+
     if not args.aplicar:
         print("\nNada foi gravado. Para aplicar:  python carga_inicial.py --aplicar")
+    elif fonte_local:
+        print(f"\n>>> FALTA UM PASSO MANUAL <<<")
+        print(f"Os processos estão no banco, mas a planilha ainda não tem os uids.")
+        print(f"Enquanto a coluna não for preenchida, uma nova execução não")
+        print(f"reconhece estas linhas e criaria processos duplicados.")
+        print(f"\nAbra {ARQUIVO_UIDS} e siga as instruções — são dois blocos de colar.")
+
     return 0
+
+
+def _escrever_arquivo_uids(blocos: list[tuple[str, str, int, list[str]]]) -> None:
+    """Gera o arquivo com as colunas de uid para colar no Excel.
+
+    Colar preserva validação de dados, formatação condicional e fórmulas —
+    coisas que o openpyxl descartaria ao salvar o arquivo.
+    """
+    linhas_saida: list[str] = [
+        "COMO USAR",
+        "=========",
+        "Para cada bloco abaixo: copie as linhas indicadas (incluindo o",
+        "cabeçalho uid_royal) e cole no Excel na célula indicada.",
+        "",
+        "Depois de colar, proteja a coluna contra edição manual. Se um uid",
+        "sumir ou for alterado, o sync cria um processo duplicado e o cliente",
+        "perde o histórico.",
+        "",
+    ]
+
+    for aba, coluna, linha_cab, uids in blocos:
+        linhas_saida += [
+            "=" * 62,
+            f"ABA: {aba}",
+            f"COLAR EM: {coluna}{linha_cab}",
+            "=" * 62,
+            planilha.COLUNA_UID,
+            *uids,
+            "",
+        ]
+
+    with open(ARQUIVO_UIDS, "w", encoding="utf-8") as f:
+        f.write("\n".join(linhas_saida))
+
+    print(f"Gerado: {ARQUIVO_UIDS}")
 
 
 if __name__ == "__main__":

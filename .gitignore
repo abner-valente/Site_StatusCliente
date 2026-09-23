@@ -67,3 +67,6 @@ desktop.ini
 *.log
 saida/
 tmp/
+
+# Saida da carga inicial: lista de uids para colar na planilha
+uids_para_colar.txt
