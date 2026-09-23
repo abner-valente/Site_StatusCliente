@@ -70,7 +70,7 @@ def principal() -> int:
 
     total_novos = 0
     total_etapas = 0
-    blocos_uid: list[tuple[str, str, int, list[str]]] = []
+    blocos_uid: list[tuple[str, str, int, list[str], int]] = []
 
     for aba, modalidade in planilha.ABAS_FLUXO.items():
         print(f"--- {aba} ({modalidade}) ---")
@@ -89,11 +89,13 @@ def principal() -> int:
             print(f"  coluna {planilha.COLUNA_UID} ausente; lugar dela: {col_uid}{linha_cab}")
 
         uids_desta_aba: list[str] = []
+        novos_nesta_aba = 0
 
         for p in linhas:
             novo = p.uid is None
             if novo:
                 p.uid = str(uuid.uuid4())
+                novos_nesta_aba += 1
             uids_desta_aba.append(p.uid)
 
             concluidas = sum(1 for s in p.etapas.values() if s == "concluido")
@@ -127,15 +129,21 @@ def principal() -> int:
                     "modalidade": p.modalidade,
                     "status": status,
                 })
-                # Na carga inicial o histórico registra só o ponto de partida.
-                # A partir daqui, o sync grava apenas quando o status MUDA.
-                hist_reg.append({
-                    "processo_id": proc["id"],
-                    "etapa_id": etapa_id,
-                    "status_de": None,
-                    "status_para": status,
-                    "origem": "carga_inicial",
-                })
+                # Ponto de partida do histórico, gravado UMA vez só, para
+                # processos que esta execução acabou de criar.
+                #
+                # Histórico é append-only: rodar a carga de novo sobre um
+                # processo existente duplicaria as linhas de partida, e não
+                # há como desfazer sem desligar o gatilho. Daqui em diante
+                # quem grava é o sync, e só quando o status MUDA.
+                if novo:
+                    hist_reg.append({
+                        "processo_id": proc["id"],
+                        "etapa_id": etapa_id,
+                        "status_de": None,
+                        "status_para": status,
+                        "origem": "carga_inicial",
+                    })
 
             banco.gravar_etapas(sb, etapas_reg)
             banco.gravar_historico(sb, hist_reg)
@@ -143,7 +151,7 @@ def principal() -> int:
             total_novos += 1 if novo else 0
             total_etapas += len(etapas_reg)
 
-        blocos_uid.append((aba, col_uid, linha_cab, uids_desta_aba))
+        blocos_uid.append((aba, col_uid, linha_cab, uids_desta_aba, novos_nesta_aba))
         print()
 
     # --- titulares -------------------------------------------------------
@@ -214,7 +222,10 @@ def principal() -> int:
     print()
 
     # --- arquivo de uids -------------------------------------------------
-    if args.aplicar and fonte_local:
+    # Só quando há linha nova sem carimbo. Um aviso que aparece em toda
+    # execução vira ruído, e aí ninguém o lê na vez em que ele importa.
+    pendentes = [b for b in blocos_uid if b[4] > 0]
+    if args.aplicar and fonte_local and pendentes:
         _escrever_arquivo_uids(blocos_uid)
 
     print("=== Resumo ===")
@@ -223,17 +234,20 @@ def principal() -> int:
 
     if not args.aplicar:
         print("\nNada foi gravado. Para aplicar:  python carga_inicial.py --aplicar")
-    elif fonte_local:
+    elif fonte_local and pendentes:
+        novos = sum(b[4] for b in pendentes)
         print(f"\n>>> FALTA UM PASSO MANUAL <<<")
-        print(f"Os processos estão no banco, mas a planilha ainda não tem os uids.")
+        print(f"{novos} processo(s) receberam uid novo, e a planilha ainda não o tem.")
         print(f"Enquanto a coluna não for preenchida, uma nova execução não")
         print(f"reconhece estas linhas e criaria processos duplicados.")
-        print(f"\nAbra {ARQUIVO_UIDS} e siga as instruções — são dois blocos de colar.")
+        print(f"\nAbra {ARQUIVO_UIDS} e cole a coluna inteira nas abas indicadas.")
+    elif fonte_local:
+        print("\nPlanilha e banco em sincronia: todas as linhas já têm uid.")
 
     return 0
 
 
-def _escrever_arquivo_uids(blocos: list[tuple[str, str, int, list[str]]]) -> None:
+def _escrever_arquivo_uids(blocos: list[tuple[str, str, int, list[str], int]]) -> None:
     """Gera o arquivo com as colunas de uid para colar no Excel.
 
     Colar preserva validação de dados, formatação condicional e fórmulas —
@@ -251,7 +265,7 @@ def _escrever_arquivo_uids(blocos: list[tuple[str, str, int, list[str]]]) -> Non
         "",
     ]
 
-    for aba, coluna, linha_cab, uids in blocos:
+    for aba, coluna, linha_cab, uids, _novos in blocos:
         linhas_saida += [
             "=" * 62,
             f"ABA: {aba}",
