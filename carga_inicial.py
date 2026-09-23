@@ -159,17 +159,55 @@ def principal() -> int:
                 linha["uid_planilha"]: linha["id"]
                 for linha in banco.processos_por_uid(sb).values()
             }
-            registros, orfaos = [], []
+            # Deduplica por (processo, e-mail) ANTES de mandar ao banco.
+            #
+            # O mesmo e-mail em processos diferentes é legítimo e continua
+            # valendo: uma pessoa pode comprar mais de um imóvel. A restrição
+            # do banco é unique (processo_id, email), por processo.
+            #
+            # O que não pode é o mesmo e-mail duas vezes no MESMO processo —
+            # caso de um casal que compartilha uma caixa de entrada. Sem
+            # deduplicar, o upsert tenta tocar a mesma linha duas vezes na
+            # mesma instrução e o Postgres recusa com o código 21000.
+            por_chave: dict[tuple[str, str], dict] = {}
+            orfaos, fundidos = [], []
+
             for t in titulares:
                 pid = uid_para_id.get(t.uid_processo)
                 if pid is None:
                     orfaos.append(t)
                     continue
-                registros.append({"processo_id": pid, "nome": t.nome, "email": t.email})
+
+                chave = (pid, t.email)
+                anterior = por_chave.get(chave)
+                if anterior is None:
+                    por_chave[chave] = {
+                        "processo_id": pid, "nome": t.nome, "email": t.email,
+                    }
+                    continue
+
+                # Mesmo acesso, duas pessoas: mantém os dois nomes no registro.
+                if t.nome not in anterior["nome"].split(" / "):
+                    anterior["nome"] = f"{anterior['nome']} / {t.nome}"
+                fundidos.append((t.email, anterior["nome"]))
+
+            registros = list(por_chave.values())
 
             banco.gravar_titulares(sb, registros)
             ligados = banco.vincular_titulares_pendentes(sb)
+
             print(f"  {len(registros)} gravado(s), {ligados} ligado(s) a contas existentes")
+
+            for email, nome in fundidos:
+                print(f"  fundido: {email} aparece mais de uma vez no mesmo "
+                      f"processo — titular gravado como {nome!r}")
+
+            emails = [r["email"] for r in registros]
+            repetidos = {e for e in emails if emails.count(e) > 1}
+            for e in sorted(repetidos):
+                n = emails.count(e)
+                print(f"  {e} é titular de {n} processos — vai ver os {n} ao logar")
+
             for t in orfaos:
                 print(f"  AVISO: uid_processo {t.uid_processo!r} de {t.email} "
                       f"não existe no banco — titular ignorado")
