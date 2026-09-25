@@ -164,9 +164,45 @@ def principal() -> int:
     for proc in sumidos:
         print(f"  SUMIU DA PLANILHA: {proc['imovel']} (uid {proc['uid_planilha']})")
 
+    # ---- plano de titulares -------------------------------------------
+    # Calculado ANTES da guarda: remover titular é revogar acesso, e uma
+    # revogação em massa precisa passar pelo mesmo freio que uma mudança de
+    # status em massa.
+    titulares_planilha = planilha.ler_titulares(fonte)
+    uid_para_id = {u: pr["id"] for u, pr in no_banco.items()}
+    desejados: dict[tuple[str, str], dict] = {}
+    for t in titulares_planilha:
+        pid = uid_para_id.get(t.uid_processo)
+        if pid is None:
+            continue
+        chave = (pid, t.email)
+        anterior = desejados.get(chave)
+        if anterior is None:
+            desejados[chave] = {"processo_id": pid, "nome": t.nome, "email": t.email}
+        elif t.nome not in anterior["nome"].split(" / "):
+            anterior["nome"] = f"{anterior['nome']} / {t.nome}"
+
+    # Só mexe em titular de processo que APARECE na planilha. Processo ausente
+    # já é tratado como "sumiu" e não deve perder os acessos por tabela.
+    ids_na_planilha = {uid_para_id[u] for u in vistos_uid if u in uid_para_id}
+    no_banco_titulares = banco.titulares_por_processo(sb)
+    a_remover = []
+    for pid in ids_na_planilha:
+        for t in no_banco_titulares.get(pid, []):
+            if (pid, (t.get("email") or "").lower()) not in desejados:
+                a_remover.append(t)
+
+    total_titulares = sum(len(v) for v in no_banco_titulares.values())
+    if a_remover:
+        print()
+        print(f"ACESSOS A REVOGAR ({len(a_remover)}):")
+        for t in a_remover:
+            print(f"  {t['email']:34} {t['nome']}")
+
     # ---- defesa 3: guarda de sanidade ---------------------------------
     try:
-        _guarda(ativos, processos_tocados, sumidos, sem_uid, desconhecidos, args.forcar)
+        _guarda(ativos, processos_tocados, sumidos, sem_uid, desconhecidos,
+                a_remover, total_titulares, args.forcar)
     except SyncAbortado as e:
         print(f"\n>>> SINCRONIZAÇÃO ABORTADA <<<\n{e}", file=sys.stderr)
         print("\nNada foi gravado. Confira o plano acima. Se a mudança for "
@@ -208,21 +244,11 @@ def principal() -> int:
     banco.marcar_visto(sb, [no_banco[u]["id"] for u in vistos_uid if u in no_banco])
 
     # ---- titulares ----------------------------------------------------
-    titulares = planilha.ler_titulares(fonte)
-    if titulares:
-        uid_para_id = {u: p["id"] for u, p in no_banco.items()}
-        por_chave: dict[tuple[str, str], dict] = {}
-        for t in titulares:
-            pid = uid_para_id.get(t.uid_processo)
-            if pid is None:
-                continue
-            chave = (pid, t.email)
-            anterior = por_chave.get(chave)
-            if anterior is None:
-                por_chave[chave] = {"processo_id": pid, "nome": t.nome, "email": t.email}
-            elif t.nome not in anterior["nome"].split(" / "):
-                anterior["nome"] = f"{anterior['nome']} / {t.nome}"
-        banco.gravar_titulares(sb, list(por_chave.values()))
+    # Grava antes de remover: se algo falhar no meio, sobra acesso a mais, não
+    # a menos. Cliente sem acesso abre chamado; acesso que some sem aviso
+    # parece que o sistema perdeu o processo dele.
+    banco.gravar_titulares(sb, list(desejados.values()))
+    banco.remover_titulares(sb, [t["id"] for t in a_remover])
 
     ligados = banco.vincular_titulares_pendentes(sb)
 
@@ -230,11 +256,14 @@ def principal() -> int:
     print(f"etapas atualizadas   : {len(etapas_reg)}")
     print(f"linhas de histórico  : {len(hist_reg)}")
     print(f"processos desativados: {len(sumidos)}")
+    print(f"titulares gravados   : {len(desejados)}")
+    print(f"acessos revogados    : {len(a_remover)}")
     print(f"titulares ligados    : {ligados}")
     return 0
 
 
-def _guarda(ativos, tocados, sumidos, sem_uid, desconhecidos, forcar):
+def _guarda(ativos, tocados, sumidos, sem_uid, desconhecidos,
+            a_remover, total_titulares, forcar):
     """Defesa 3. Levanta SyncAbortado quando a mudança tem cara de acidente."""
     motivos = []
 
@@ -253,6 +282,12 @@ def _guarda(ativos, tocados, sumidos, sem_uid, desconhecidos, forcar):
         motivos.append(
             f"{len(sem_uid)} linha(s) sem uid. Rode carga_inicial.py e cole a "
             "coluna antes de sincronizar, senão viram processos duplicados.")
+
+    if a_remover and total_titulares and len(a_remover) / total_titulares > 0.30:
+        motivos.append(
+            f"{len(a_remover)} de {total_titulares} acessos seriam revogados. "
+            "Trocar e-mail em massa na aba Titulares é legítimo, mas some com "
+            "o acesso de quem estava lá — confira a lista acima antes.")
 
     limite = float(os.environ.get("LIMITE_MUDANCA_EM_MASSA", "0.30"))
     if ativos and len(tocados) / ativos > limite:

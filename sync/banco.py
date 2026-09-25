@@ -195,3 +195,19 @@ def marcar_visto(sb, processo_ids: list[str]) -> None:
     agora = datetime.now(timezone.utc).isoformat()
     for pid in processo_ids:
         sb.table("processos").update({"visto_em": agora}).eq("id", pid).execute()
+
+
+def remover_titulares(sb, ids: list[str]) -> None:
+    """Apaga titulares por id. É revogação de acesso, não soft delete.
+
+    Diferente de `processos`, aqui apagar é a intenção: alguém que saiu da aba
+    Titulares, ou cujo e-mail foi corrigido, precisa perder o acesso de fato.
+    Manter a linha antiga deixaria o endereço anterior entrando no site.
+
+    A conta em auth.users continua existindo. Se a pessoa não for titular de
+    mais nada, ela loga e vê "Nenhuma negociação encontrada" — que é o
+    comportamento correto. Apagar a conta em si é decisão separada, feita no
+    painel do Supabase.
+    """
+    for tid in ids:
+        sb.table("titulares").delete().eq("id", tid).execute()
