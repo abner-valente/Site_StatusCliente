@@ -47,16 +47,13 @@ jobs:
     timeout-minutes: 10
 
     env:
-      SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-      SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
+      # Estes dois mandam sobre o que vier no secret ENV. O load_dotenv não
+      # sobrescreve variável que já existe no ambiente, então um ENV copiado da
+      # máquina de desenvolvimento — que aponta para o arquivo .xlsx local —
+      # não faz o workflow ler a fonte errada.
       FONTE_PLANILHA: google_sheets
-      GOOGLE_SHEET_ID: ${{ secrets.GOOGLE_SHEET_ID }}
-      GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
+      GOOGLE_CREDENTIALS_FILE: credenciais-google.json
 
-      # Chave para desligar sem mexer no código: defina a variável de
-      # repositório SYNC_HABILITADO como 0 durante uma reestruturação da
-      # planilha (Settings -> Secrets and variables -> Actions -> Variables).
       SYNC_HABILITADO: ${{ vars.SYNC_HABILITADO || '1' }}
       LIMITE_MUDANCA_EM_MASSA: ${{ vars.LIMITE_MUDANCA_EM_MASSA || '0.30' }}
 
@@ -71,18 +68,36 @@ jobs:
       - name: Instalar dependências
         run: pip install -r requirements.txt
 
-      - name: Conferir que os secrets existem
-        # Falha com mensagem clara em vez de deixar o script quebrar por
-        # variável vazia, que é um erro bem mais difícil de ler no log.
+      - name: Montar .env e credenciais
+        # Dois secrets só: ENV com o mesmo conteúdo do .env local, e
+        # GOOGLE_CREDENTIALS_JSON com a chave da service account.
+        #
+        # Nada daqui é impresso. O log mostra apenas quais nomes de variável
+        # foram definidos, nunca os valores.
+        env:
+          ENV: ${{ secrets.ENV }}
+          GOOGLE_CREDENTIALS_JSON: ${{ secrets.GOOGLE_CREDENTIALS_JSON }}
         run: |
           faltando=""
-          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY GOOGLE_SHEET_ID GOOGLE_CREDENTIALS_JSON; do
-            [ -z "${!v}" ] && faltando="$faltando $v"
-          done
+          [ -z "$ENV" ] && faltando="$faltando ENV"
+          [ -z "$GOOGLE_CREDENTIALS_JSON" ] && faltando="$faltando GOOGLE_CREDENTIALS_JSON"
           if [ -n "$faltando" ]; then
             echo "::error::Secrets ausentes:$faltando"
             exit 1
           fi
+
+          printf '%s\n' "$ENV" > .env
+          printf '%s'   "$GOOGLE_CREDENTIALS_JSON" > credenciais-google.json
+          chmod 600 .env credenciais-google.json
+
+          echo "Variáveis recebidas no .env:"
+          grep -oE '^[A-Z_]+=' .env | tr -d '=' | sed 's/^/  /'
+
+          for v in SUPABASE_URL SUPABASE_SERVICE_ROLE_KEY GOOGLE_SHEET_ID; do
+            grep -q "^$v=." .env || { echo "::error::$v ausente ou vazia no secret ENV"; exit 1; }
+          done
+
+          python -c "import json,sys; json.load(open('credenciais-google.json')); print('credenciais-google.json: JSON valido')"
 
       - name: Sincronizar
         run: |
