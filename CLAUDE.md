@@ -160,19 +160,19 @@ cada um cria e apaga os próprios dados.
 | 0 — banco e carga | pronta |
 | 1 — identidade | acesso provisionado, **e-mails ainda são de teste** |
 | 2 — site | no ar |
-| 3 — sync automático | fonte Google Sheets pronta; falta cadastrar secrets e ligar o cron |
+| 3 — sync automático | **no ar**, roda todo dia às 19:00 de Brasília |
 
-O cliente optou pelo **Google Sheets** em 29/09/2026. Isso eliminou a
-dependência de registro de app no Azure AD com consentimento de admin, que era
-o bloqueio de prazo mais longo do projeto.
+O cliente optou pelo **Google Sheets** em 29/09/2026, o que eliminou a
+dependência de registro de app no Azure AD com consentimento de admin — era o
+bloqueio de prazo mais longo do projeto.
 
 Bloqueios que restam: e-mails reais dos titulares; SMTP próprio, porque o
 padrão do Supabase tem limite baixo de envios por hora.
 
-O cron do GitHub Actions segue comentado até alguém rodar o workflow manual uma
-vez e conferir o plano. Agendamento que falha repetidamente treina todo mundo a
-ignorar a notificação — justamente o aviso que precisa funcionar quando algo
-quebrar de verdade.
+**Workflow agendado é desativado pelo GitHub após 60 dias sem commit no
+repositório.** Este projeto pode ficar meses parado, e aí o sync para sozinho —
+o sintoma é o site envelhecendo sem nada dar erro. O GitHub avisa o dono por
+e-mail ao desativar; qualquer commit reativa.
 
 ---
 
