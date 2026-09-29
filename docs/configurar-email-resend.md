@@ -106,8 +106,8 @@ Duas perguntas destravam a etapa:
 1. **Onde o DNS do domínio é gerenciado?** Registrador, Cloudflare, painel da
    hospedagem, ou a agência que fez o site.
 2. **Já existe um registro `_dmarc`?** Só pode haver um por domínio. Se existir,
-   **não crie outro** — o segundo invalida os dois. Pule o DMARC; ele é
-   opcional e o domínio verifica sem ele.
+   **não crie outro** — ver a seção sobre DMARC adiante. Ele é opcional e o
+   domínio verifica sem ele.
 
 Antecipe a preocupação de quem administra DNS de empresa: **isto não afeta o
 e-mail atual**. Os registros ficam em nomes exclusivos do Resend
@@ -125,6 +125,44 @@ Route 53 junta automaticamente:
 ```
 
 Colar tudo de uma vez dá erro ou salva truncado.
+
+### Sobre o DMARC
+
+Os três registros têm papéis diferentes, e é fácil confundi-los:
+
+| | Pergunta que responde |
+| --- | --- |
+| **SPF** | quais servidores podem mandar em nome deste domínio? |
+| **DKIM** | esta mensagem foi assinada por um deles, e chegou intacta? |
+| **DMARC** | e se as respostas acima forem "não"? O que faço com a mensagem? |
+
+SPF e DKIM são as verificações; DMARC é a **política** sobre o que fazer quando
+elas falham. O que importa é o valor de `p=`:
+
+| Política | O destinatário faz |
+| --- | --- |
+| `p=none` | nada — entrega normal, só registra |
+| `p=quarantine` | joga no spam |
+| `p=reject` | recusa, a mensagem nem chega |
+
+O Resend sugere `v=DMARC1; p=none;`, que é **modo observação**: não muda nada
+na entrega, só declara publicamente que o domínio tem política — sinal de
+domínio bem cuidado para Gmail e Outlook.
+
+Começar em `none` é a prática recomendada. Ir direto para `reject` com alguma
+coisa mal configurada faria e-mail legítimo da imobiliária ser recusado sem
+aviso.
+
+**Só pode haver um `_dmarc` por domínio.** O destinatário procura um registro
+nesse nome; achando dois, a especificação manda ignorar os dois. O resultado é
+pior que não ter nenhum — você acha que tem política e não tem.
+
+Então: se já existir, **pule**. Se não existir, adicione o `p=none`. Custo
+zero, risco zero.
+
+O underscore em `_dmarc` e `_domainkey` é convenção: sinaliza que o nome não é
+endereço de servidor, e sim configuração para máquina ler. Por isso eles
+parecem estranhos ao lado de `www` e `mail`.
 
 ### Prazo
 
