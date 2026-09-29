@@ -35,8 +35,13 @@ Dois arquivos ficam de fora de propósito e precisam ser copiados à mão:
 
 | Arquivo | Onde conseguir | Por que está fora |
 | --- | --- | --- |
-| `Planilha_Royal_Processo_Venda_Imoveis.xlsx` | com o time da Royal | dados de 15 compradores reais |
-| `.env` | recriar a partir de `.env.example` | contém a `service_role` key |
+| `.env` | recriar a partir de `.env.example` | tem a `service_role` key e a chave do Google |
+| chave da service account (`.json`) | Google Cloud Console | dá acesso de escrita à planilha |
+| `Planilha_..._Imoveis.xlsx` | com o time da Royal | dados de 15 compradores reais |
+
+A planilha `.xlsx` só é necessária para a fonte de desenvolvimento
+(`FONTE_PLANILHA=xlsx_local`). Em produção a fonte é o Google Sheets e nada
+precisa estar no disco.
 
 Para o `.env`:
 

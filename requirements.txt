@@ -1,11 +1,15 @@
 # Royal Imóveis — dependências do sync
 #
 #   python -m venv .venv
-#   .venv\Scripts\activate
+#   .venv\Scripts\activate     (Windows)
+#   source .venv/bin/activate      (Linux, macOS)
 #   pip install -r requirements.txt
 
-# Leitura do .xlsx local (fase 0)
-openpyxl==3.1.5
+# Google Sheets — fonte de produção.
+# Escolhido em 29/09/2026: elimina a dependência de registro de app no Azure AD
+# com consentimento de admin, que travava a automação.
+gspread==6.1.4
+google-auth==2.36.0
 
 # Acesso ao Supabase pela API REST, em HTTPS.
 # Escolhido por causa do firewall da rede da Royal, que bloqueia as portas
@@ -15,6 +19,5 @@ supabase==2.10.0
 # Leitura do .env
 python-dotenv==1.0.1
 
-# Fase 3 — Microsoft Graph. Descomentar quando o Azure AD estiver liberado.
-# msal==1.31.1
-# requests==2.32.3
+# Fonte de desenvolvimento: lê o .xlsx do disco, sem rede.
+openpyxl==3.1.5

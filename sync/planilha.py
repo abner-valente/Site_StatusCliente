@@ -103,6 +103,58 @@ def normalizar_status(bruto: str) -> str:
     return t
 
 
+def normalizar_data(bruto: str) -> str | None:
+    """Converte a data da planilha para ISO (AAAA-MM-DD).
+
+    Aceita três formas, porque as fontes entregam coisas diferentes:
+
+      - ISO, vindo do .xlsx pelo openpyxl
+      - número de série do Google Sheets, dias desde 30/12/1899
+      - dd/mm/aaaa, caso alguém leia com formatação
+
+    O formato dd/mm/aaaa assume DIA PRIMEIRO, que é o padrão pt-BR da planilha.
+    É a única das três que seria ambígua; as outras duas não dependem de
+    idioma, e é por isso que a fonte do Sheets pede valor não formatado.
+
+    Valor irreconhecível levanta erro em vez de virar None em silêncio: data
+    errada no acompanhamento vira "há X dias" errado na tela do cliente.
+    """
+    import datetime as _dt
+
+    t = (bruto or "").strip()
+    if not t:
+        return None
+
+    # ISO
+    m = re.fullmatch(r"(\d{4})-(\d{2})-(\d{2})", t)
+    if m:
+        return t
+
+    # número de série do Sheets (e do Excel): dias desde 30/12/1899
+    m = re.fullmatch(r"(\d+)(?:\.\d+)?", t)
+    if m:
+        serie = int(m.group(1))
+        # 1 a 100000 cobre de 1900 a 2173. Fora disso não é data.
+        if 1 <= serie <= 100000:
+            return (_dt.date(1899, 12, 30) + _dt.timedelta(days=serie)).isoformat()
+
+    # dd/mm/aaaa ou dd/mm/aa
+    m = re.fullmatch(r"(\d{1,2})/(\d{1,2})/(\d{2}|\d{4})", t)
+    if m:
+        dia, mes, ano = (int(g) for g in m.groups())
+        if ano < 100:
+            ano += 2000
+        try:
+            return _dt.date(ano, mes, dia).isoformat()
+        except ValueError as e:
+            raise PlanilhaError(f"Data inválida na planilha: {bruto!r} ({e})") from e
+
+    raise PlanilhaError(
+        f"Não reconheci a data {bruto!r}. Esperado AAAA-MM-DD, dd/mm/aaaa "
+        "ou número de série do Sheets."
+    )
+
+
 def letra_coluna(indice_zero: int) -> str:
     """0 -> A, 25 -> Z, 26 -> AA."""
     letras = ""
@@ -236,7 +288,7 @@ def ler_fluxo(
             cliente_bruto=cliente,
             imovel=valor(i_imovel),
             corretor=valor(i_corretor),
-            data_assinatura=valor(i_data) or None,
+            data_assinatura=normalizar_data(valor(i_data)),
         ))
         processos[-1].etapas = etapas
 

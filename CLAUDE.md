@@ -85,11 +85,21 @@ Como esse passo falhava em silêncio quando esquecido, ele deixou de ser manual:
 continua existindo para auditar quem está sem acesso e para o caso de o sync
 ter rodado com `--sem-provisionar`.
 
-**`openpyxl` descarta validação de dados ao salvar.** Por isso o script não
-escreve na planilha local: destruiria as listas suspensas de status, e status
-digitado livre quebra a normalização. Ele gera `uids_para_colar.txt` para
-colagem manual. No Excel Online (fase 3) o Graph edita a célula sem reescrever
-o arquivo e isso deixa de existir.
+**`openpyxl` descarta validação de dados ao salvar.** Vale só para a fonte
+`xlsx_local`, de desenvolvimento: salvar por ali destruiria as listas suspensas
+de status, e status digitado livre quebra a normalização. Com essa fonte o
+carimbo do uid sai por `uids_para_colar.txt`, para colagem manual.
+
+No Google Sheets isso não existe — a API altera a célula sem reescrever o
+arquivo, e o carimbo é automático.
+
+**Data do Sheets é lida sem formatação, de propósito.** Com formatação,
+`01/06/2026` vira 1 de junho ou 6 de janeiro conforme o locale da planilha, e
+alguém mexer nesse ajuste inverteria todas as datas em silêncio. Sem
+formatação vem o número de série, que não depende de idioma.
+`planilha.normalizar_data` converte, aceita ISO e dd/mm/aaaa como alternativas,
+e **levanta erro** no que não reconhecer — data errada vira "há X dias" errado
+na tela do cliente.
 
 **A CSP tem a URL do Supabase fixa** em `netlify.toml`, em `connect-src`.
 Trocar de projeto exige mudar lá junto com `site/config.js`. Esquecer publica
@@ -132,23 +142,28 @@ cada um cria e apaga os próprios dados.
 | 0 — banco e carga | pronta |
 | 1 — identidade | acesso provisionado, **e-mails ainda são de teste** |
 | 2 — site | no ar |
-| 3 — sync automático | lógica pronta e testada, **bloqueada no Azure AD** |
+| 3 — sync automático | fonte Google Sheets pronta; falta cadastrar secrets e ligar o cron |
 
-Bloqueios reais: registro de app no Azure com `Files.ReadWrite.All` e
-consentimento de admin; e-mails reais dos titulares; SMTP próprio, porque o
-padrão do Supabase tem limite baixo por hora.
+O cliente optou pelo **Google Sheets** em 29/09/2026. Isso eliminou a
+dependência de registro de app no Azure AD com consentimento de admin, que era
+o bloqueio de prazo mais longo do projeto.
 
-O cron do GitHub Actions está comentado de propósito: ligar antes do Excel
-Online criaria uma falha a cada 15 minutos e treinaria todo mundo a ignorar a
-notificação — justamente o aviso que precisa funcionar quando o secret do
-Azure expirar.
+Bloqueios que restam: e-mails reais dos titulares; SMTP próprio, porque o
+padrão do Supabase tem limite baixo de envios por hora.
+
+O cron do GitHub Actions segue comentado até alguém rodar o workflow manual uma
+vez e conferir o plano. Agendamento que falha repetidamente treina todo mundo a
+ignorar a notificação — justamente o aviso que precisa funcionar quando algo
+quebrar de verdade.
 
 ---
 
 ## Não está no repositório
 
-- **A planilha `.xlsx`** — tem dados de 15 compradores reais
-- **`.env`** — tem a `service_role` key
+- **A planilha `.xlsx`** — tem dados de 15 compradores reais (fonte de
+  desenvolvimento; a de produção é o Google Sheets)
+- **`.env`** — tem a `service_role` key e o JSON da service account do Google
+- **`credenciais*.json`** — a chave da service account
 - `uids_para_colar.txt`, `titulares_para_colar.csv`
 
 O histórico do Git é permanente: um dado commitado não sai apagando depois.
