@@ -47,10 +47,27 @@ Crie com um endereço da Royal e mantenha acesso de operação.
 
 **Domains → Add Domain.**
 
-Use um **subdomínio**, não o domínio raiz — `acesso.royalimoveis.com.br`, por
-exemplo. É recomendação da própria documentação do Resend: se o e-mail
-transacional tiver algum problema de entrega, ele não contamina a reputação do
-e-mail comercial da imobiliária.
+### Escolher entre raiz e subdomínio
+
+O endereço do remetente tem que ser **no domínio exato que foi verificado**.
+Verificar `acesso.royalimoveis.com.br` obriga a mandar de
+`algo@acesso.royalimoveis.com.br`, o que fica redundante na caixa de entrada.
+
+| Verificar | Remetente fica | |
+| --- | --- | --- |
+| `royalimoveis.com.br` | `acesso@royalimoveis.com.br` | mais limpo para o comprador |
+| `mail.royalimoveis.com.br` | `acesso@mail.royalimoveis.com.br` | aceitável |
+| `acesso.royalimoveis.com.br` | `acesso@acesso.royalimoveis.com.br` | redundante |
+
+O Resend recomenda subdomínio para isolar reputação: se o e-mail transacional
+tiver problema de entrega, não contamina o e-mail comercial da imobiliária.
+
+Com o volume deste projeto — 15 clientes pedindo link esporadicamente — esse
+risco é baixo, e a clareza para o comprador pesa mais. **Recomendação: raiz.**
+Se o cliente for cauteloso com o e-mail corporativo, `mail.` resolve com pouca
+perda de legibilidade.
+
+Decida antes de publicar o DNS: mudar depois exige refazer a verificação.
 
 O Resend devolve três registros para publicar no DNS:
 
@@ -106,6 +123,22 @@ SMTP*:
 
 O `Sender email` precisa ser do domínio verificado. Se for de outro, o Resend
 recusa, e o sintoma é o de sempre: nenhum link chega e nada dá erro.
+
+**Não precisa ser uma caixa de e-mail que existe.** É apenas o campo "De:" da
+mensagem; ninguém entrega nada nesse endereço. O que o Resend exige é o
+domínio, não a caixa.
+
+Mas tem consequência: se o comprador **responder** ao e-mail do link, a
+resposta vai para esse endereço. Caixa inexistente devolve erro, e o cliente
+acha que foi ignorado.
+
+| Endereço | Respostas |
+| --- | --- |
+| Caixa real que alguém lê | chegam a alguém — melhor |
+| `nao-responda@...` | somem, mas o nome já avisa |
+| Caixa inexistente com nome comum | somem **e** o cliente não sabe |
+
+Use uma das duas primeiras. A terceira é a única ruim.
 
 O `Sender name` é o que o comprador vê na caixa de entrada. Deve ser o nome da
 imobiliária, não o de quem desenvolveu.
