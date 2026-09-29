@@ -1,22 +1,19 @@
 # Royal Imóveis — sincronização planilha -> banco
 #
-# PARA LIGAR O AGENDAMENTO
-#   1. cadastre os secrets em Settings -> Secrets and variables -> Actions:
-#        SUPABASE_URL
-#        SUPABASE_SERVICE_ROLE_KEY
-#        GOOGLE_SHEET_ID
-#        GOOGLE_CREDENTIALS_JSON   (o JSON inteiro da service account)
-#   2. rode uma vez pelo botão "Run workflow", com "aplicar" DESMARCADO,
-#      e confira o plano no log
-#   3. descomente o bloco `schedule` abaixo
+# Roda todo dia às 19:00 de Brasília, e sob demanda pelo botão "Run workflow".
 #
-# Enquanto o passo 3 não acontece, o workflow só roda quando alguém aperta o
-# botão. É de propósito: um agendamento que falha a cada 15 minutos treina todo
-# mundo a ignorar a notificação — justamente o aviso que precisa funcionar
-# quando algo quebrar de verdade.
+# SECRETS necessários, em Settings -> Secrets and variables -> Actions:
+#   ENV                       o mesmo conteúdo do .env local
+#   GOOGLE_CREDENTIALS_JSON   o JSON da service account do Google
 #
-# Benefício colateral do cron: projeto free do Supabase pausa após uma semana
-# sem atividade. Uma execução a cada 15 minutos mantém o banco acordado.
+# ARMADILHA DO GITHUB: workflow agendado é DESATIVADO automaticamente após
+# 60 dias sem commit no repositório. Este projeto pode ficar meses parado — se
+# isso acontecer, o sync simplesmente para, e o sintoma é o site envelhecendo
+# sem ninguém perceber. O GitHub avisa o dono do repositório por e-mail quando
+# desativa; não ignore esse aviso. Um commit qualquer reativa.
+#
+# Benefício colateral: projeto free do Supabase pausa após uma semana sem
+# atividade. Uma execução diária mantém o banco acordado.
 
 name: Sincronizar planilha
 
@@ -32,8 +29,18 @@ on:
         type: boolean
         default: false
 
-  # schedule:
-  #   - cron: "*/15 * * * *"
+  schedule:
+    # 22:00 UTC = 19:00 em Brasília, depois do expediente. Assim o que o time
+    # editou durante o dia aparece no site na mesma noite, e o cliente que
+    # olhar de manhã já vê o estado atual.
+    #
+    # Uma vez por dia é adequado a um processo que se move ao longo de meses.
+    # Para deixar mais frequente, troque a hora por um intervalo — "0 */6 * * *"
+    # roda de 6 em 6 horas.
+    #
+    # O horário do GitHub é sempre UTC, e o Brasil não tem mais horário de
+    # verão, então 22:00 UTC é 19:00 o ano inteiro.
+    - cron: "0 22 * * *"
 
 concurrency:
   # Duas execuções simultâneas comparariam o mesmo estado e gravariam histórico
