@@ -5,22 +5,29 @@ nenhum cliente real** — não é questão de volume, ver abaixo.
 
 ---
 
-## Por que isto é bloqueio, não melhoria
+## Por que isto é necessário
 
-O serviço de e-mail embutido do Supabase tem duas limitações:
+O serviço de e-mail embutido do Supabase é de desenvolvimento:
 
 | | Padrão do Supabase | Com SMTP próprio |
 | --- | --- | --- |
 | Limite de envio | **2 mensagens por hora** | 30/hora, ajustável |
-| Para quem entrega | **só membros da equipe do projeto** | qualquer endereço |
+| Entregabilidade | remetente compartilhado, reputação fora do seu controle | domínio próprio |
 
-A segunda linha é a que importa. O Supabase **recusa** entregar para endereços
-fora da organização do projeto. O login funciona para quem administra o projeto
-e falha para todo o resto — sem erro na tela, porque ela nunca revela se um
-e-mail está cadastrado.
+Com 15 clientes, duas mensagens por hora não se sustenta: se três pessoas
+pedirem o link na mesma hora, a terceira não recebe. E **o sintoma é mudo** —
+a tela de login mostra a mesma mensagem de sucesso com ou sem erro, de
+propósito, para não revelar a terceiros quem é cliente da Royal.
 
-O sintoma é o pior possível: o cliente diz que não recebeu, e não há erro em
-lugar nenhum para investigar.
+A documentação do Supabase afirma também que o serviço padrão recusa entregar
+para endereços fora da equipe do projeto. **Em 29/09/2026 isso não se
+confirmou neste projeto**: um endereço externo, sem vínculo com a organização,
+recebeu o link normalmente. Pode ser restrição em implantação gradual ou
+aplicada a projetos de outra data — não dá para contar com nenhum dos dois
+comportamentos.
+
+O que é constante e suficiente para justificar a troca: o limite por hora e a
+reputação do remetente compartilhado, que é o que faz magic link cair em spam.
 
 ---
 

@@ -168,10 +168,15 @@ bloqueio de prazo mais longo do projeto.
 
 Bloqueios que restam para atender cliente real:
 
-**SMTP próprio é obrigatório, não melhoria.** O serviço embutido do Supabase
-entrega **só para membros da equipe do projeto** e no limite de 2 mensagens por
-hora. Ele recusa qualquer outro endereço — o login funciona para quem
-administra o projeto e falha para todo o resto, sem erro na tela. Roteiro em
+**SMTP próprio, por causa do limite de 2 mensagens por hora** do serviço
+embutido do Supabase. Com 15 clientes isso não se sustenta: três pedidos de
+link na mesma hora e o terceiro não recebe — sem erro na tela, que mostra
+sucesso de qualquer jeito para não revelar quem é cliente.
+
+A documentação do Supabase diz também que o serviço padrão recusa entregar
+fora da equipe do projeto. Testado em 29/09/2026: **não se confirmou aqui**,
+um endereço externo recebeu normalmente. Não conte com nenhum dos dois
+comportamentos. Roteiro em
 [`docs/configurar-email-resend.md`](docs/configurar-email-resend.md).
 
 E os e-mails reais dos titulares, que hoje são de teste.
