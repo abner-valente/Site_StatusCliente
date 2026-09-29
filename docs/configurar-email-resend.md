@@ -86,8 +86,47 @@ não verifica nunca.
 
 ## 2. Publicar no DNS e aguardar
 
-Onde publicar depende de onde o domínio está apontado: registro.br, Cloudflare,
-ou o painel da hospedagem.
+Os registros que o Resend mostra **variam conforme a região** escolhida. Na
+região de São Paulo ele pede dois CNAME apontando para `forge.rmta.net`; em
+outras, MX e TXT apontando para `amazonses.com`. **Copie o que o painel
+mostrar**, não uma lista decorada.
+
+Ao copiar o DKIM, use o botão de copiar do Resend. O valor aparece truncado na
+tela (`p=MIGfMA [...] QIDAQAB`), e chave cortada é a causa mais comum de
+verificação que nunca completa.
+
+No campo de nome, use só o prefixo — `resend._domainkey`, `send`, `rsend`. O
+painel de DNS completa o domínio sozinho, e quem cola o nome inteiro cria
+`send.dominio.com.dominio.com`.
+
+### O que perguntar ao cliente
+
+Duas perguntas destravam a etapa:
+
+1. **Onde o DNS do domínio é gerenciado?** Registrador, Cloudflare, painel da
+   hospedagem, ou a agência que fez o site.
+2. **Já existe um registro `_dmarc`?** Só pode haver um por domínio. Se existir,
+   **não crie outro** — o segundo invalida os dois. Pule o DMARC; ele é
+   opcional e o domínio verifica sem ele.
+
+Antecipe a preocupação de quem administra DNS de empresa: **isto não afeta o
+e-mail atual**. Os registros ficam em nomes exclusivos do Resend
+(`resend._domainkey`, `send`, `rsend`) e não colidem com Google Workspace,
+Microsoft 365 ou qualquer outro provedor.
+
+### Route 53, se for o caso
+
+O Route 53 aceita no máximo 255 caracteres por trecho de TXT, e a chave DKIM
+costuma passar disso. Quebre em dois trechos entre aspas, na mesma linha — o
+Route 53 junta automaticamente:
+
+```
+"p=MIGfMA0GCSqG...primeiros 255 caracteres" "restante da chave"
+```
+
+Colar tudo de uma vez dá erro ou salva truncado.
+
+### Prazo
 
 A verificação leva **até 72 horas**, normalmente bem menos. O painel do Resend
 mostra o status — só siga quando estiver verificado.
