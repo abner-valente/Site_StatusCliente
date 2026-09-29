@@ -110,10 +110,14 @@ Todos simulam por padrão e só gravam com `--aplicar`.
 
 | Comando | O que faz |
 | --- | --- |
-| `python sincronizar.py` | compara planilha e banco, grava só o que mudou |
+| `python sincronizar.py` | compara planilha e banco, grava só o que mudou, cria as contas que faltarem |
 | `python carga_inicial.py` | primeira carga; gera `uids_para_colar.txt` |
-| `python provisionar_acessos.py` | cria contas de login a partir de `titulares` |
+| `python provisionar_acessos.py` | audita quem está sem acesso; provisiona isolado |
 | `python gerar_titulares.py` | gera `titulares_para_colar.csv` |
+
+**A planilha é a fonte da verdade, inclusive sobre acesso.** Editar `titulares`
+direto no banco não adianta — o próximo sync apaga o que não estiver na aba
+`Titulares`. Para trocar o e-mail de um cliente, edite a planilha e rode o sync.
 
 Bandeiras úteis: `--forcar` no `sincronizar.py` ignora a guarda de sanidade,
 depois de conferir o plano.

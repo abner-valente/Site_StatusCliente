@@ -42,7 +42,7 @@ from datetime import datetime, timezone
 
 from dotenv import load_dotenv
 
-from sync import banco, fontes, planilha
+from sync import acessos, banco, fontes, planilha
 
 
 class SyncAbortado(RuntimeError):
@@ -55,6 +55,8 @@ def principal() -> int:
                     help="grava; sem esta flag apenas simula")
     ap.add_argument("--forcar", action="store_true",
                     help="ignora a guarda de sanidade (use após conferir o plano)")
+    ap.add_argument("--sem-provisionar", action="store_true",
+                    help="não cria contas de login ao final")
     args = ap.parse_args()
 
     load_dotenv()
@@ -252,6 +254,23 @@ def principal() -> int:
 
     ligados = banco.vincular_titulares_pendentes(sb)
 
+    # ---- acessos ------------------------------------------------------
+    # Titular novo na planilha precisa de conta ANTES de pedir o magic link,
+    # senão a API responde 422 otp_disabled e nenhum e-mail sai — sem erro na
+    # tela, que esconde de propósito se o endereço existe. Passo que falha em
+    # silêncio não pode depender de alguém lembrar.
+    res_acessos = None
+    if not args.sem_provisionar:
+        print()
+        print("--- acessos ---")
+        try:
+            res_acessos = acessos.provisionar(sb, aplicar=True)
+            acessos.relatar(res_acessos, aplicar=True, prefixo="  ")
+        except Exception as e:
+            print(f"  FALHA ao provisionar acessos: {e}", file=sys.stderr)
+            print("  Os dados foram gravados. Rode provisionar_acessos.py --aplicar",
+                  file=sys.stderr)
+
     print(f"\n=== Aplicado ===")
     print(f"etapas atualizadas   : {len(etapas_reg)}")
     print(f"linhas de histórico  : {len(hist_reg)}")
@@ -259,6 +278,10 @@ def principal() -> int:
     print(f"titulares gravados   : {len(desejados)}")
     print(f"acessos revogados    : {len(a_remover)}")
     print(f"titulares ligados    : {ligados}")
+    if res_acessos is not None:
+        print(f"contas criadas       : {len(res_acessos.criados)}")
+        if res_acessos.sem_acesso:
+            print(f"AINDA SEM ACESSO     : {len(res_acessos.sem_acesso)}")
     return 0
 
 

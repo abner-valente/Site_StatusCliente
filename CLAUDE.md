@@ -55,6 +55,12 @@ métricas.
 **7. O front não filtra por titular.** Quem filtra é a RLS, no banco. Se o
 filtro estivesse no JavaScript, um bug mostraria processo alheio.
 
+**8. A planilha manda, inclusive sobre quem tem acesso.** Editar a tabela
+`titulares` direto no banco não resolve nada: o próximo sync apaga o que não
+estiver na aba `Titulares`. Trocar o e-mail de um cliente é **editar a planilha
+e rodar o sync** — nunca o contrário. Mexer só no banco gera uma hora de
+confusão, porque funciona até a sincronização seguinte.
+
 ---
 
 ## Armadilhas já pagas
@@ -71,9 +77,13 @@ gatilho `for each statement` mais o revoke do privilégio.
 
 **Conta precisa existir antes do primeiro login.** Cadastro público desligado
 mais `shouldCreateUser: false` fecham a porta também para clientes legítimos.
-`provisionar_acessos.py` cria as contas a partir de `titulares`. Sem isso a API
-responde `422 otp_disabled` e nenhum e-mail sai — e a tela mostra sucesso
-assim mesmo, de propósito, para não revelar quem é cliente.
+Sem conta, a API responde `422 otp_disabled` e nenhum e-mail sai — e a tela
+mostra sucesso assim mesmo, de propósito, para não revelar quem é cliente.
+
+Como esse passo falhava em silêncio quando esquecido, ele deixou de ser manual:
+`sincronizar.py` provisiona ao final de cada execução. `provisionar_acessos.py`
+continua existindo para auditar quem está sem acesso e para o caso de o sync
+ter rodado com `--sem-provisionar`.
 
 **`openpyxl` descarta validação de dados ao salvar.** Por isso o script não
 escreve na planilha local: destruiria as listas suspensas de status, e status
@@ -90,13 +100,21 @@ um site que carrega bonito e falha em toda consulta.
 ## Comandos
 
 ```bash
-python carga_inicial.py            # simula; --aplicar grava
-python sincronizar.py              # simula; --aplicar grava, --forcar ignora a guarda
-python provisionar_acessos.py      # simula; --aplicar cria contas
+python sincronizar.py              # simula; --aplicar grava; --forcar ignora a guarda
+python carga_inicial.py            # primeira carga; gera uids_para_colar.txt
+python provisionar_acessos.py      # audita quem está sem acesso
 python gerar_titulares.py          # gera a aba Titulares para preencher
 ```
 
 Todos simulam por padrão. Nenhum grava sem `--aplicar`.
+
+`sincronizar.py --aplicar` já cria as contas de login que faltarem. Desligue
+com `--sem-provisionar` se quiser controlar esse passo à parte.
+
+**Trocar o e-mail de um cliente:** edite a coluna `email` na aba `Titulares`,
+rode `python sincronizar.py` para conferir o plano — ele lista os acessos a
+revogar —, depois `--aplicar`. Se a troca for em massa, a guarda barra e exige
+`--forcar`, que é a fricção certa para revogar acesso de várias pessoas.
 
 **Migrações** ficam em `supabase/migrations/`, aplicadas em ordem numérica.
 A rede da Royal bloqueia as portas 5432 e 6543, então `supabase db push` não
