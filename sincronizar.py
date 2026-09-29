@@ -38,6 +38,7 @@ from __future__ import annotations
 import argparse
 import os
 import sys
+import uuid
 from datetime import datetime, timezone
 
 from dotenv import load_dotenv
@@ -102,8 +103,19 @@ def principal() -> int:
     dados_alterados: list[tuple[str, dict]] = []
     vistos_uid: set[str] = set()
 
+    novos: list = []
     for p in linhas_planilha:
         if not p.uid:
+            # Linha nova: o sync cria o processo e carimba o uid de volta.
+            #
+            # Só quando a fonte aceita escrita segura. Sem o carimbo, a
+            # execução seguinte não reconheceria a linha e criaria o processo
+            # de novo — duplicar é pior do que parar e avisar.
+            if fonte.escrita_segura and p.imovel:
+                p.uid = str(uuid.uuid4())
+                novos.append(p)
+                vistos_uid.add(p.uid)
+                continue
             sem_uid.append(p)
             continue
 
@@ -158,6 +170,12 @@ def principal() -> int:
     else:
         print("Nenhuma mudança de status.\n")
 
+    if novos:
+        print(f"PROCESSOS NOVOS ({len(novos)}):")
+        for p in novos:
+            print(f"  {p.cliente_bruto:22} {p.imovel}")
+        print()
+
     for pid, campos in dados_alterados:
         print(f"  dados alterados em {pid[:8]}: {', '.join(campos)}")
     for p in sem_uid:
@@ -173,34 +191,94 @@ def principal() -> int:
     # status em massa.
     titulares_planilha = planilha.ler_titulares(fonte)
     uid_para_id = {u: pr["id"] for u, pr in no_banco.items()}
+
+    # Imóvel -> uid, para quem preencheu a aba Titulares sem o uid. Copiar um
+    # UUID de 36 caracteres entre abas na mão era o passo mais propenso a erro
+    # do cadastro; aqui a pessoa escreve o imóvel e o sync resolve.
+    #
+    # Imóvel repetido não é resolvido por adivinhação: entra em `ambiguos` e a
+    # linha é ignorada com aviso.
+    # A chave ignora acento, caixa e espaço repetido: quem redigita o imóvel na
+    # outra aba erra justamente nisso, e recusar por causa de um acento seria
+    # rigor sem propósito.
+    def _chave_imovel(texto: str) -> str:
+        return planilha.normalizar_rotulo(texto)
+
+    por_imovel: dict[str, list[str]] = {}
+    for p in linhas_planilha:
+        if p.uid and p.imovel:
+            por_imovel.setdefault(_chave_imovel(p.imovel), []).append(p.uid)
+
+    titulares_a_carimbar: list[tuple[int, str]] = []
+    ambiguos, sem_processo = [], []
+
     desejados: dict[tuple[str, str], dict] = {}
     for t in titulares_planilha:
-        pid = uid_para_id.get(t.uid_processo)
-        if pid is None:
-            continue
-        chave = (pid, t.email)
+        uid = t.uid_processo
+        if not uid:
+            candidatos = por_imovel.get(_chave_imovel(t.imovel), [])
+            if len(candidatos) == 1:
+                uid = candidatos[0]
+                titulares_a_carimbar.append((t.numero_linha, uid))
+            elif len(candidatos) > 1:
+                ambiguos.append(t)
+                continue
+            else:
+                sem_processo.append(t)
+                continue
+
+        # Indexado por UID, não pelo id do banco: processo criado nesta mesma
+        # execução ainda não tem id, e o titular dele seria descartado — que é
+        # justamente o caso do cadastro de cliente novo numa passada só.
+        chave = (uid, t.email)
         anterior = desejados.get(chave)
         if anterior is None:
-            desejados[chave] = {"processo_id": pid, "nome": t.nome, "email": t.email}
+            desejados[chave] = {"uid": uid, "nome": t.nome, "email": t.email}
         elif t.nome not in anterior["nome"].split(" / "):
             anterior["nome"] = f"{anterior['nome']} / {t.nome}"
 
     # Só mexe em titular de processo que APARECE na planilha. Processo ausente
     # já é tratado como "sumiu" e não deve perder os acessos por tabela.
-    ids_na_planilha = {uid_para_id[u] for u in vistos_uid if u in uid_para_id}
+    id_para_uid = {pr["id"]: u for u, pr in no_banco.items()}
     no_banco_titulares = banco.titulares_por_processo(sb)
     a_remover = []
-    for pid in ids_na_planilha:
+    for uid in vistos_uid:
+        pid = uid_para_id.get(uid)
+        if pid is None:
+            continue                      # processo novo: ainda não tem titular
         for t in no_banco_titulares.get(pid, []):
-            if (pid, (t.get("email") or "").lower()) not in desejados:
+            if (uid, (t.get("email") or "").lower()) not in desejados:
                 a_remover.append(t)
 
+    # Quem ainda não tem acesso. Reportar só as revogações seria assimétrico:
+    # quem confere o plano precisa ver as duas pontas antes de aplicar.
+    ja_existentes = {
+        (id_para_uid.get(pid), (t.get("email") or "").lower())
+        for pid, lista in no_banco_titulares.items() for t in lista
+    }
+    a_criar = [d for chave, d in desejados.items() if chave not in ja_existentes]
+
     total_titulares = sum(len(v) for v in no_banco_titulares.values())
+
+    if a_criar:
+        print()
+        print(f"ACESSOS A CRIAR ({len(a_criar)}):")
+        for d in a_criar:
+            print(f"  {d['email']:34} {d['nome']}")
+
     if a_remover:
         print()
         print(f"ACESSOS A REVOGAR ({len(a_remover)}):")
         for t in a_remover:
             print(f"  {t['email']:34} {t['nome']}")
+
+    for t in ambiguos:
+        print(f"  IMÓVEL AMBÍGUO em Titulares linha {t.numero_linha} ({t.email}): "
+              f"{t.imovel!r} aparece em mais de um processo. Preencha o "
+              f"uid_processo nessa linha.")
+    for t in sem_processo:
+        print(f"  SEM PROCESSO em Titulares linha {t.numero_linha} ({t.email}): "
+              f"não achei processo com o imóvel {t.imovel!r}.")
 
     # ---- defesa 3: guarda de sanidade ---------------------------------
     try:
@@ -217,6 +295,56 @@ def principal() -> int:
         return 0
 
     # ---- escrita ------------------------------------------------------
+    # Onde carimbar. Só consulta a planilha quando há algo a escrever, para
+    # não gastar chamada de API em execução que não muda nada — e são 96 por
+    # dia com o cron de 15 minutos.
+    col_uid_por_aba: dict[str, str] = {}
+    for aba in {p.aba for p in novos}:
+        idx, _ = planilha.indice_coluna_uid(fonte, aba)
+        col_uid_por_aba[aba] = planilha.letra_coluna(idx)
+
+    col_uid_titulares = None
+    if titulares_a_carimbar:
+        col_uid_titulares, _ = planilha.info_coluna_uid_titulares(fonte)
+
+    # Processos novos primeiro: o carimbo vai para a planilha ANTES do banco.
+    # Se o banco falhar, a planilha já tem o uid e a execução seguinte
+    # reaproveita. Na ordem inversa, uma falha no carimbo faria a próxima
+    # execução gerar outro uid e duplicar o processo.
+    for p in novos:
+        fonte.escrever_celula(p.aba, p.numero_linha, col_uid_por_aba[p.aba], p.uid)
+
+        proc = banco.gravar_processo(sb, {
+            "uid_planilha": p.uid,
+            "modalidade": p.modalidade,
+            "imovel": p.imovel,
+            "corretor": p.corretor or None,
+            "data_assinatura": p.data_assinatura,
+            "ativo": True,
+        })
+        no_banco[p.uid] = proc
+        uid_para_id[p.uid] = proc["id"]
+
+        etapas_novas, hist_novo = [], []
+        for codigo, status in p.etapas.items():
+            etapa_id = ids_etapa[(p.modalidade, codigo)]
+            etapas_novas.append({
+                "processo_id": proc["id"], "etapa_id": etapa_id,
+                "modalidade": p.modalidade, "status": status,
+            })
+            hist_novo.append({
+                "processo_id": proc["id"], "etapa_id": etapa_id,
+                "status_de": None, "status_para": status, "origem": "sync",
+            })
+        banco.gravar_etapas(sb, etapas_novas)
+        banco.gravar_historico(sb, hist_novo)
+
+    # Carimba na aba Titulares o uid que foi resolvido pelo imóvel, para a
+    # próxima execução casar direto e não depender de o texto do imóvel
+    # continuar idêntico.
+    for numero_linha, uid in titulares_a_carimbar:
+        fonte.escrever_celula(planilha.ABA_TITULARES, numero_linha, col_uid_titulares, uid)
+
     for pid, campos in dados_alterados:
         sb.table("processos").update(campos).eq("id", pid).execute()
 
@@ -250,7 +378,18 @@ def principal() -> int:
     # Grava antes de remover: se algo falhar no meio, sobra acesso a mais, não
     # a menos. Cliente sem acesso abre chamado; acesso que some sem aviso
     # parece que o sistema perdeu o processo dele.
-    banco.gravar_titulares(sb, list(desejados.values()))
+    # Agora todo processo existe no banco, inclusive os criados acima, então o
+    # uid vira id sem perder ninguém.
+    registros_titulares = []
+    for d in desejados.values():
+        pid = uid_para_id.get(d["uid"])
+        if pid is None:
+            print(f"  AVISO: {d['email']} aponta para um processo que não existe")
+            continue
+        registros_titulares.append(
+            {"processo_id": pid, "nome": d["nome"], "email": d["email"]})
+
+    banco.gravar_titulares(sb, registros_titulares)
     banco.remover_titulares(sb, [t["id"] for t in a_remover])
 
     ligados = banco.vincular_titulares_pendentes(sb)
@@ -276,7 +415,8 @@ def principal() -> int:
     print(f"etapas atualizadas   : {len(etapas_reg)}")
     print(f"linhas de histórico  : {len(hist_reg)}")
     print(f"processos desativados: {len(sumidos)}")
-    print(f"titulares gravados   : {len(desejados)}")
+    print(f"processos criados    : {len(novos)}")
+    print(f"titulares gravados   : {len(registros_titulares)}")
     print(f"acessos revogados    : {len(a_remover)}")
     print(f"titulares ligados    : {ligados}")
     if res_acessos is not None:
@@ -304,8 +444,10 @@ def _guarda(ativos, tocados, sumidos, sem_uid, desconhecidos,
 
     if sem_uid:
         motivos.append(
-            f"{len(sem_uid)} linha(s) sem uid. Rode carga_inicial.py e cole a "
-            "coluna antes de sincronizar, senão viram processos duplicados.")
+            f"{len(sem_uid)} linha(s) sem uid que o sync não pôde criar. "
+            "Com o Google Sheets ele carimba sozinho; isto acontece quando a "
+            "fonte é o arquivo local (que não aceita escrita sem estragar a "
+            "validação de dados) ou quando a linha está sem imóvel.")
 
     if a_remover and total_titulares and len(a_remover) / total_titulares > 0.30:
         motivos.append(

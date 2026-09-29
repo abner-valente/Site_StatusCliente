@@ -41,6 +41,11 @@ class FonteDePlanilha(Protocol):
         """
         ...
 
+    # Escrever aqui é seguro? Só quem responde True recebe carimbo automático
+    # de uid. O openpyxl descarta validação de dados ao salvar, então a fonte
+    # local não pode escrever sem estragar as listas suspensas da planilha.
+    escrita_segura: bool
+
     def descrever(self) -> str:
         """Frase curta identificando a origem, para aparecer no relatório.
 
@@ -71,6 +76,10 @@ class FonteGoogleSheets:
     """
 
     ESCOPOS = ["https://www.googleapis.com/auth/spreadsheets"]
+
+    # A API altera a célula sem reescrever o arquivo: validação de dados,
+    # formatação condicional e fórmulas ficam intactas.
+    escrita_segura = True
 
     def __init__(self, credenciais_json: str, planilha_id: str):
         self._credenciais_json = credenciais_json
@@ -155,6 +164,10 @@ class FonteXlsxLocal:
     vindas da aba Listas. Com esta fonte, o carimbo do uid sai por
     uids_para_colar.txt, para colagem manual.
     """
+
+    # Salvar pelo openpyxl descartaria as listas suspensas de status vindas da
+    # aba Listas, e status digitado livre quebra a normalização do sync.
+    escrita_segura = False
 
     def __init__(self, caminho: str):
         self.caminho = caminho

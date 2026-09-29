@@ -121,10 +121,28 @@ Todos simulam por padrão. Nenhum grava sem `--aplicar`.
 `sincronizar.py --aplicar` já cria as contas de login que faltarem. Desligue
 com `--sem-provisionar` se quiser controlar esse passo à parte.
 
+**Cadastrar cliente novo:** numa passada na planilha, adicione a linha na aba
+de fluxo (sem uid — o sync carimba) e a linha em `Titulares`. Ali o processo
+pode ser identificado pelo **imóvel** em vez do `uid_processo`; o sync resolve
+e escreve o uid de volta. Depois, um comando:
+
+```bash
+python sincronizar.py            # confere o plano
+python sincronizar.py --aplicar  # cria processo, titular e conta de acesso
+```
+
+Identificar pelo imóvel existe porque copiar um UUID de 36 caracteres entre
+abas era o passo mais propenso a erro do cadastro. Imóvel repetido não é
+resolvido por adivinhação: o sync avisa e pede o `uid_processo` naquela linha.
+
 **Trocar o e-mail de um cliente:** edite a coluna `email` na aba `Titulares`,
 rode `python sincronizar.py` para conferir o plano — ele lista os acessos a
-revogar —, depois `--aplicar`. Se a troca for em massa, a guarda barra e exige
-`--forcar`, que é a fricção certa para revogar acesso de várias pessoas.
+criar e a revogar —, depois `--aplicar`. Se a troca for em massa, a guarda
+barra e exige `--forcar`, que é a fricção certa para revogar acesso de várias
+pessoas.
+
+`carga_inicial.py` serve só para o que o nome diz: a primeira carga de uma
+planilha nova, em projeto novo. No dia a dia, quem cria processo é o sync.
 
 **Migrações** ficam em `supabase/migrations/`, aplicadas em ordem numérica.
 A rede da Royal bloqueia as portas 5432 e 6543, então `supabase db push` não

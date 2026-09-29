@@ -54,7 +54,9 @@ class LinhaProcesso:
 
 @dataclass
 class LinhaTitular:
-    uid_processo: str
+    numero_linha: int          # 1-based, para carimbar o uid de volta
+    uid_processo: str | None   # vazio quando a pessoa identificou pelo imóvel
+    imovel: str                # alternativa ao uid, mais fácil de digitar
     nome: str
     email: str
 
@@ -326,6 +328,38 @@ def linha_cabecalho_numero(fonte, aba: str) -> int:
 # Aba de titulares
 # ---------------------------------------------------------------------------
 
+def _cabecalho_titulares(linhas: list[list[str]]) -> int:
+    """Índice (0-based) do cabeçalho da aba Titulares."""
+    for i, linha in enumerate(linhas[:15]):
+        chaves = {normalizar_rotulo(c) for c in linha}
+        if "email" in chaves and ("uid_processo" in chaves or "imovel" in chaves
+                                  or "imovel / empreendimento" in chaves):
+            return i
+    raise PlanilhaError(
+        f"Aba {ABA_TITULARES!r} existe mas não tem as colunas esperadas. "
+        "São necessárias: email, nome, e uid_processo OU imóvel."
+    )
+
+
+def info_coluna_uid_titulares(fonte) -> tuple[str, int]:
+    """Letra da coluna uid_processo na aba Titulares e a linha do cabeçalho.
+
+    O sync usa para escrever o uid de volta depois de resolver pelo imóvel —
+    assim a pessoa nunca precisa copiar um UUID de 36 caracteres na mão, que
+    era o passo mais frágil do cadastro de cliente novo.
+    """
+    linhas = fonte.ler_aba(ABA_TITULARES)
+    i_cab = _cabecalho_titulares(linhas)
+    colunas = mapear_colunas(linhas[i_cab])
+    idx = colunas.get("uid_processo")
+    if idx is None:
+        # coluna ausente: indica a primeira livre depois do último cabeçalho
+        ultimo = max((i for i, c in enumerate(linhas[i_cab]) if (c or "").strip()),
+                     default=-1)
+        idx = ultimo + 1
+    return letra_coluna(idx), i_cab + 1
+
+
 def ler_titulares(fonte) -> list[LinhaTitular]:
     """Lê a aba Titulares. Ausente, devolve lista vazia.
 
@@ -334,6 +368,14 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
     fluxo NÃO é partido automaticamente — os separadores são inconsistentes
     ("/", " / ", "/ ", " e ") e uma linha mal partida daria a alguém acesso ao
     processo de outro.
+
+    O processo pode ser identificado de duas formas:
+
+      uid_processo  exato, e é o que fica na planilha depois
+      imóvel        para digitar na mão; o sync resolve e carimba o uid
+
+    A segunda existe porque copiar um UUID entre abas era o passo mais
+    propenso a erro do cadastro de cliente novo.
     """
     try:
         linhas = fonte.ler_aba(ABA_TITULARES)
@@ -343,35 +385,36 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
     if not linhas:
         return []
 
-    i_cab = None
-    for i, linha in enumerate(linhas[:15]):
-        chaves = {normalizar_rotulo(c) for c in linha}
-        if "email" in chaves and ("uid_processo" in chaves or "uid_royal" in chaves):
-            i_cab = i
-            break
-    if i_cab is None:
-        raise PlanilhaError(
-            f"Aba {ABA_TITULARES!r} existe mas não tem as colunas esperadas: "
-            "uid_processo, nome, email."
-        )
-
+    i_cab = _cabecalho_titulares(linhas)
     colunas = mapear_colunas(linhas[i_cab])
-    i_uid = colunas.get("uid_processo", colunas.get("uid_royal"))
+    i_uid = colunas.get("uid_processo")
     i_nome = colunas.get("nome")
     i_email = colunas.get("email")
+    i_imovel = colunas.get("imovel / empreendimento", colunas.get("imovel"))
 
     titulares: list[LinhaTitular] = []
-    for linha in linhas[i_cab + 1:]:
+    for deslocamento, linha in enumerate(linhas[i_cab + 1:], start=1):
         def valor(idx):
             if idx is None or idx >= len(linha):
                 return ""
             return (linha[idx] or "").strip()
 
-        uid, email = valor(i_uid), valor(i_email).lower()
-        if not uid or not email:
+        email = valor(i_email).lower()
+        if not email:
             continue
+
+        uid, imovel = valor(i_uid), valor(i_imovel)
+        if not uid and not imovel:
+            raise PlanilhaError(
+                f"Aba {ABA_TITULARES!r}, linha {i_cab + 1 + deslocamento}: "
+                f"{email} não tem uid_processo nem imóvel. Preencha um dos dois "
+                "para o sync saber a qual processo o acesso pertence."
+            )
+
         titulares.append(LinhaTitular(
-            uid_processo=uid,
+            numero_linha=i_cab + 1 + deslocamento,
+            uid_processo=uid or None,
+            imovel=imovel,
             nome=valor(i_nome) or email,
             email=email,
         ))
