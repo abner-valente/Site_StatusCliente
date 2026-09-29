@@ -91,6 +91,7 @@ def principal() -> int:
         print(f"PLANILHA FORA DO FORMATO — nada foi gravado\n{e}", file=sys.stderr)
         return 1
 
+    print(f"fonte    : {fonte.descrever()}")
     no_banco = banco.processos_por_uid(sb)
     etapas_banco = banco.etapas_atuais(sb)
 

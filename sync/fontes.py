@@ -41,6 +41,15 @@ class FonteDePlanilha(Protocol):
         """
         ...
 
+    def descrever(self) -> str:
+        """Frase curta identificando a origem, para aparecer no relatório.
+
+        Sem isso, uma execução lendo do arquivo local e outra lendo do Sheets
+        produzem saídas idênticas — e quem está conferindo uma migração de
+        fonte não tem como saber se ela realmente aconteceu.
+        """
+        ...
+
 
 # ---------------------------------------------------------------------------
 # Produção — Google Sheets
@@ -126,6 +135,9 @@ class FonteGoogleSheets:
         planilha = self._abrir()
         planilha.worksheet(aba).update_acell(f"{coluna}{linha}", valor)
 
+    def descrever(self) -> str:
+        return f"Google Sheets ({self.planilha_id[:6]}...{self.planilha_id[-4:]})"
+
 
 # ---------------------------------------------------------------------------
 # Desenvolvimento — arquivo local
@@ -170,6 +182,9 @@ class FonteXlsxLocal:
         wb[aba][f"{coluna}{linha}"] = valor
         wb.save(self.caminho)
         wb.close()
+
+    def descrever(self) -> str:
+        return f"arquivo local ({self.caminho})"
 
 
 # ---------------------------------------------------------------------------

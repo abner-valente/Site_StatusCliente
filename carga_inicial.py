@@ -63,6 +63,7 @@ def principal() -> int:
     # Fonte local não aceita escrita segura; ver docstring do módulo.
     fonte_local = isinstance(fonte, fontes.FonteXlsxLocal)
 
+    print(f"fonte    : {fonte.descrever()}")
     existentes = banco.processos_por_uid(sb)
     if existentes:
         print(f"Aviso: o banco já tem {len(existentes)} processo(s). "
