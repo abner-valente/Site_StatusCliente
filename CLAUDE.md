@@ -166,8 +166,15 @@ O cliente optou pelo **Google Sheets** em 29/09/2026, o que eliminou a
 dependência de registro de app no Azure AD com consentimento de admin — era o
 bloqueio de prazo mais longo do projeto.
 
-Bloqueios que restam: e-mails reais dos titulares; SMTP próprio, porque o
-padrão do Supabase tem limite baixo de envios por hora.
+Bloqueios que restam para atender cliente real:
+
+**SMTP próprio é obrigatório, não melhoria.** O serviço embutido do Supabase
+entrega **só para membros da equipe do projeto** e no limite de 2 mensagens por
+hora. Ele recusa qualquer outro endereço — o login funciona para quem
+administra o projeto e falha para todo o resto, sem erro na tela. Roteiro em
+[`docs/configurar-email-resend.md`](docs/configurar-email-resend.md).
+
+E os e-mails reais dos titulares, que hoje são de teste.
 
 **Workflow agendado é desativado pelo GitHub após 60 dias sem commit no
 repositório.** Este projeto pode ficar meses parado, e aí o sync para sozinho —

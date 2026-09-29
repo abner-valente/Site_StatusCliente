@@ -1,0 +1,143 @@
+# Configurar o envio de e-mail (Resend)
+
+Guia para quando houver sinal verde do cliente. Sem isto, **o site não atende
+nenhum cliente real** — não é questão de volume, ver abaixo.
+
+---
+
+## Por que isto é bloqueio, não melhoria
+
+O serviço de e-mail embutido do Supabase tem duas limitações:
+
+| | Padrão do Supabase | Com SMTP próprio |
+| --- | --- | --- |
+| Limite de envio | **2 mensagens por hora** | 30/hora, ajustável |
+| Para quem entrega | **só membros da equipe do projeto** | qualquer endereço |
+
+A segunda linha é a que importa. O Supabase **recusa** entregar para endereços
+fora da organização do projeto. O login funciona para quem administra o projeto
+e falha para todo o resto — sem erro na tela, porque ela nunca revela se um
+e-mail está cadastrado.
+
+O sintoma é o pior possível: o cliente diz que não recebeu, e não há erro em
+lugar nenhum para investigar.
+
+---
+
+## Pré-requisitos
+
+- Domínio da Royal com acesso ao DNS
+- Conta no Resend **criada com um e-mail que a Royal controla**
+
+Sobre a segunda: se a conta for criada com o e-mail da agência que desenvolve,
+a operação do cliente fica dependente de infraestrutura de terceiro. No dia em
+que o contrato encerrar, o acesso dos compradores para de funcionar junto.
+Crie com um endereço da Royal e mantenha acesso de operação.
+
+---
+
+## 1. Adicionar o domínio no Resend
+
+**Domains → Add Domain.**
+
+Use um **subdomínio**, não o domínio raiz — `acesso.royalimoveis.com.br`, por
+exemplo. É recomendação da própria documentação do Resend: se o e-mail
+transacional tiver algum problema de entrega, ele não contamina a reputação do
+e-mail comercial da imobiliária.
+
+O Resend devolve três registros para publicar no DNS:
+
+| Tipo | Nome | Valor |
+| --- | --- | --- |
+| MX | `send` | `feedback-smtp.<região>.amazonses.com`, prioridade 10 |
+| TXT | `send` | `v=spf1 include:amazonses.com ~all` |
+| TXT | `resend._domainkey` | a chave DKIM que o painel mostrar |
+
+**Pegadinha:** o nome vai **sem o domínio**. É `send`, não
+`send.royalimoveis.com.br`. Quase todo painel de DNS completa sozinho, e quem
+cola o nome inteiro cria `send.royalimoveis.com.br.royalimoveis.com.br`, que
+não verifica nunca.
+
+---
+
+## 2. Publicar no DNS e aguardar
+
+Onde publicar depende de onde o domínio está apontado: registro.br, Cloudflare,
+ou o painel da hospedagem.
+
+A verificação leva **até 72 horas**, normalmente bem menos. O painel do Resend
+mostra o status — só siga quando estiver verificado.
+
+---
+
+## 3. Criar a chave de API
+
+**API Keys → Create API Key**, com permissão de envio e **restrita ao domínio**
+da Royal.
+
+A restrição importa: se a chave vazar ou precisar ser revogada, nada mais na
+conta é afetado.
+
+A chave aparece **uma única vez**. Copie na hora e guarde onde a equipe
+encontre depois.
+
+---
+
+## 4. Configurar no Supabase
+
+**Project Settings → Authentication → SMTP Settings**, ligar *Enable Custom
+SMTP*:
+
+| Campo | Valor |
+| --- | --- |
+| Host | `smtp.resend.com` |
+| Port | `587` |
+| Username | `resend` — literalmente esta palavra |
+| Password | a API key (`re_...`) |
+| Sender email | um endereço **do domínio verificado** |
+| Sender name | `Royal Imóveis` |
+
+O `Sender email` precisa ser do domínio verificado. Se for de outro, o Resend
+recusa, e o sintoma é o de sempre: nenhum link chega e nada dá erro.
+
+O `Sender name` é o que o comprador vê na caixa de entrada. Deve ser o nome da
+imobiliária, não o de quem desenvolveu.
+
+---
+
+## 5. Subir o limite de envios
+
+**Authentication → Rate Limits.**
+
+Depois de trocar o SMTP, o Supabase impõe 30 mensagens por hora para proteger a
+reputação de um serviço recém-configurado. Ajuste para o volume esperado.
+
+Este é o passo mais esquecido do roteiro: troca-se o SMTP para resolver a cota
+e o gargalo continua onde estava.
+
+---
+
+## 6. Conferir que funcionou
+
+Entre no site com o e-mail de um titular e **abra o cabeçalho da mensagem**
+recebida. O remetente precisa ser o do domínio da Royal.
+
+Se ainda vier pelo remetente antigo, o Supabase não aplicou a configuração —
+confira se *Enable Custom SMTP* ficou realmente ligado e salvo.
+
+Teste também com um endereço **fora** da equipe do Supabase. É exatamente o
+caso que o serviço padrão recusava, e é o que prova que a troca resolveu.
+
+---
+
+## Registrar depois de pronto
+
+Anote em algum lugar que a equipe encontre:
+
+- com qual e-mail a conta do Resend foi criada
+- qual subdomínio foi verificado
+- onde a API key está guardada
+- quem administra a conta
+
+Daqui a oito meses, quando alguém precisar rotacionar a chave, essa informação
+não pode existir só na cabeça de uma pessoa.
