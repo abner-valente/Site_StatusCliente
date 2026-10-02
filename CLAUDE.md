@@ -179,6 +179,19 @@ um endereço externo recebeu normalmente. Não conte com nenhum dos dois
 comportamentos. Roteiro em
 [`docs/configurar-email-resend.md`](docs/configurar-email-resend.md).
 
+### Domínio do e-mail: `processosroyal.com.br`
+
+Domínio **dedicado**, registrado em 02/10/2026, DNS no próprio registro.br
+(`a.auto.dns.br`), zona vazia. Em andamento: dos quatro registros do Resend,
+só o `_dmarc` entrou — e com `p=reject`, que precisa virar `p=none` até a
+autenticação estar comprovada, senão **nada é entregue e nada dá erro**.
+
+**NÃO encoste no DNS de `royalimoveisrj.com` nem `royalimoveisrj.com.br`.**
+Os dois estão delegados à inGaia (`ns1..ns4.gaiasite.com.br`) e o e-mail
+corporativo da imobiliária passa por `mx.ingaia.com.br`. O painel do
+registro.br mostra zona vazia para eles; publicar ali, ou mover a delegação,
+derruba o e-mail da Royal. O domínio dedicado existe justamente para isso.
+
 E os e-mails reais dos titulares, que hoje são de teste.
 
 **Workflow agendado é desativado pelo GitHub após 60 dias sem commit no

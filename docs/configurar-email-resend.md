@@ -31,9 +31,40 @@ reputação do remetente compartilhado, que é o que faz magic link cair em spam
 
 ---
 
+## O domínio deste projeto
+
+**`processosroyal.com.br`** — domínio dedicado, registrado em 02/10/2026 só
+para isto. DNS no próprio registro.br (`a.auto.dns.br` / `b.auto.dns.br`),
+zona vazia, nada mais depende dele.
+
+### Não encoste no DNS dos outros dois domínios
+
+`royalimoveisrj.com` e `royalimoveisrj.com.br` **não** são gerenciados no
+registro.br. Os dois estão delegados à inGaia:
+
+```
+NS  → ns1..ns4.gaiasite.com.br
+MX  → mx.ingaia.com.br
+```
+
+O e-mail corporativo da imobiliária passa por ali. O painel do registro.br
+mostra uma zona vazia para eles, e publicar naquela zona — ou mover a
+delegação para o registro.br — **derruba o e-mail da Royal**.
+
+Foi por isso que o domínio dedicado foi criado. Com ele, nada do que fizermos
+alcança a operação da imobiliária.
+
+### Consequência para a escolha de raiz ou subdomínio
+
+A seção adiante discute isolar reputação usando subdomínio. **Aqui isso não se
+aplica:** o domínio é exclusivo deste sistema e não tem outro e-mail para
+proteger. Use a **raiz**, e o remetente fica `acesso@processosroyal.com.br`.
+
+---
+
 ## Pré-requisitos
 
-- Domínio da Royal com acesso ao DNS
+- Domínio dedicado com acesso ao DNS (ver acima)
 - Conta no Resend **criada com um e-mail que a Royal controla**
 
 Sobre a segunda: se a conta for criada com o e-mail da agência que desenvolve,
@@ -149,9 +180,15 @@ O Resend sugere `v=DMARC1; p=none;`, que é **modo observação**: não muda nad
 na entrega, só declara publicamente que o domínio tem política — sinal de
 domínio bem cuidado para Gmail e Outlook.
 
-Começar em `none` é a prática recomendada. Ir direto para `reject` com alguma
-coisa mal configurada faria e-mail legítimo da imobiliária ser recusado sem
-aviso.
+**Comece sempre em `none`.** Aconteceu neste projeto em 02/10/2026: o `_dmarc`
+foi publicado com `p=reject` enquanto o DKIM e os dois CNAME ainda não existiam
+na zona. Nessa combinação **toda** mensagem falha a verificação e é recusada —
+entrega zero, e nenhum erro visível em lugar nenhum.
+
+`reject` não é errado; é o mais seguro **depois** que a autenticação está
+comprovadamente funcionando. A ordem é `none` → confirmar entrega real →
+`quarantine` → `reject`. Começar pelo fim transforma qualquer erro de
+configuração em falha total e silenciosa.
 
 **Só pode haver um `_dmarc` por domínio.** O destinatário procura um registro
 nesse nome; achando dois, a especificação manda ignorar os dois. O resultado é
@@ -164,10 +201,30 @@ O underscore em `_dmarc` e `_domainkey` é convenção: sinaliza que o nome não
 endereço de servidor, e sim configuração para máquina ler. Por isso eles
 parecem estranhos ao lado de `www` e `mail`.
 
+### Conferir pelo DNS antes de clicar em verificar
+
+O painel do registro.br pode aceitar o salvamento e **não gravar** uma entrada,
+sem mensagem de erro. Em 02/10/2026 os quatro registros foram adicionados e só
+o `_dmarc` entrou na zona — os outros três simplesmente não existiam depois de
+salvar. A chave DKIM, por ser longa, é a candidata mais provável a recusa
+silenciosa.
+
+Confira direto no servidor autoritativo, que não tem cache:
+
+```bash
+nslookup -type=TXT   resend._domainkey.processosroyal.com.br a.auto.dns.br
+nslookup -type=CNAME rsend.processosroyal.com.br             a.auto.dns.br
+nslookup -type=CNAME send.processosroyal.com.br              a.auto.dns.br
+nslookup -type=TXT   _dmarc.processosroyal.com.br            a.auto.dns.br
+```
+
+`Non-existent domain` significa que aquele registro não está na zona. Salve um
+de cada vez para descobrir qual o painel está recusando.
+
 ### Prazo
 
-A verificação leva **até 72 horas**, normalmente bem menos. O painel do Resend
-mostra o status — só siga quando estiver verificado.
+A verificação leva **até 72 horas**, normalmente bem menos. Com o DNS no
+próprio registro.br e zona nova, costuma ser questão de minutos.
 
 ---
 
