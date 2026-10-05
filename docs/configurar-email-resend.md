@@ -209,17 +209,29 @@ o `_dmarc` entrou na zona — os outros três simplesmente não existiam depois 
 salvar. A chave DKIM, por ser longa, é a candidata mais provável a recusa
 silenciosa.
 
-Confira direto no servidor autoritativo, que não tem cache:
+Confira direto no DNS:
 
 ```bash
-nslookup -type=TXT   resend._domainkey.processosroyal.com.br a.auto.dns.br
-nslookup -type=CNAME rsend.processosroyal.com.br             a.auto.dns.br
-nslookup -type=CNAME send.processosroyal.com.br              a.auto.dns.br
-nslookup -type=TXT   _dmarc.processosroyal.com.br            a.auto.dns.br
+nslookup -type=TXT   resend._domainkey.processosroyal.com.br 8.8.8.8
+nslookup -type=CNAME rsend.processosroyal.com.br             8.8.8.8
+nslookup -type=CNAME send.processosroyal.com.br              8.8.8.8
+nslookup -type=TXT   _dmarc.processosroyal.com.br            8.8.8.8
 ```
 
-`Non-existent domain` significa que aquele registro não está na zona. Salve um
-de cada vez para descobrir qual o painel está recusando.
+`Non-existent domain` significa que aquele registro não está publicado. Salve
+um de cada vez para descobrir qual o painel está recusando.
+
+Compare o **final** da chave DKIM com o que o painel do Resend mostra — é
+assim que se detecta chave truncada, que é a falha mais comum.
+
+Se quiser perguntar ao servidor autoritativo em vez do resolvedor público,
+descubra primeiro qual é: o registro.br troca entre `a.auto.dns.br` e
+`a.sec.dns.br` conforme o DNSSEC esteja ligado, e perguntar ao servidor errado
+devolve "ausente" para registros que existem.
+
+```bash
+nslookup -type=NS processosroyal.com.br 8.8.8.8
+```
 
 ### Prazo
 
