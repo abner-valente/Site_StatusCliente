@@ -158,7 +158,7 @@ cada um cria e apaga os próprios dados.
 | Fase | |
 | --- | --- |
 | 0 — banco e carga | pronta |
-| 1 — identidade | acesso provisionado, **e-mails ainda são de teste** |
+| 1 — identidade | envio de e-mail pronto; **faltam os e-mails reais dos titulares** |
 | 2 — site | no ar |
 | 3 — sync automático | **no ar**, roda todo dia às 19:00 de Brasília |
 
@@ -166,25 +166,23 @@ O cliente optou pelo **Google Sheets** em 29/09/2026, o que eliminou a
 dependência de registro de app no Azure AD com consentimento de admin — era o
 bloqueio de prazo mais longo do projeto.
 
-Bloqueios que restam para atender cliente real:
+### E-mail: resolvido em 05/10/2026
 
-**SMTP próprio, por causa do limite de 2 mensagens por hora** do serviço
-embutido do Supabase. Com 15 clientes isso não se sustenta: três pedidos de
-link na mesma hora e o terceiro não recebe — sem erro na tela, que mostra
-sucesso de qualquer jeito para não revelar quem é cliente.
+SMTP próprio pelo **Resend**, domínio **`processosroyal.com.br`** — dedicado,
+registrado só para isto, DNS no registro.br. Verificado com DKIM e SPF
+passando, confirmado no cabeçalho de uma mensagem real.
 
-A documentação do Supabase diz também que o serviço padrão recusa entregar
-fora da equipe do projeto. Testado em 29/09/2026: **não se confirmou aqui**,
-um endereço externo recebeu normalmente. Não conte com nenhum dos dois
-comportamentos. Roteiro em
+Isto substituiu o serviço embutido do Supabase, que entrega **2 mensagens por
+hora** — com 15 clientes, três pedidos de link na mesma hora e o terceiro não
+recebe, sem erro na tela.
+
+Roteiro completo, inclusive para montar isto em cliente novo, em
 [`docs/configurar-email-resend.md`](docs/configurar-email-resend.md).
 
-### Domínio do e-mail: `processosroyal.com.br`
-
-Domínio **dedicado**, registrado em 02/10/2026, DNS no próprio registro.br
-(`a.auto.dns.br`), zona vazia. Em andamento: dos quatro registros do Resend,
-só o `_dmarc` entrou — e com `p=reject`, que precisa virar `p=none` até a
-autenticação estar comprovada, senão **nada é entregue e nada dá erro**.
+O `_dmarc` **não existe** na zona. É opcional e o domínio verificou sem ele.
+Houve uma versão com `p=reject` enquanto o DKIM ainda não estava publicado —
+combinação que recusa toda mensagem sem dar erro. Se um dia for adicionado,
+comece em `p=none` e só endureça depois de confirmar entrega real.
 
 **NÃO encoste no DNS de `royalimoveisrj.com` nem `royalimoveisrj.com.br`.**
 Os dois estão delegados à inGaia (`ns1..ns4.gaiasite.com.br`) e o e-mail

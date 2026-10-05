@@ -1,7 +1,12 @@
 # Configurar o envio de e-mail (Resend)
 
-Guia para quando houver sinal verde do cliente. Sem isto, **o site não atende
-nenhum cliente real** — não é questão de volume, ver abaixo.
+> **Já está feito para a Royal**, em 05/10/2026: domínio
+> `processosroyal.com.br` verificado, SMTP configurado no Supabase, DKIM e SPF
+> confirmados com `PASS` no cabeçalho de uma mensagem real.
+>
+> Este guia segue valendo como roteiro para **montar o mesmo em cliente novo**,
+> e como referência de manutenção — rotação de chave, troca de domínio,
+> diagnóstico de entrega.
 
 ---
 
