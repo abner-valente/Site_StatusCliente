@@ -30,15 +30,7 @@ const STATUS = {
   nao_iniciado: { cls: "st-idle",     rotulo: "" },
 };
 
-const MARCA = '<div class="brand">'
-  + '<svg viewBox="0 0 48 36" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">'
-  + '<path d="M5 32 L5 15 L15 22.5 L24 8 L33 22.5 L43 15 L43 32 Z" fill="var(--accent)"/>'
-  + '<circle cx="5" cy="12.5" r="3.4" fill="var(--accent)"/>'
-  + '<circle cx="24" cy="6" r="3.8" fill="var(--accent)"/>'
-  + '<circle cx="43" cy="12.5" r="3.4" fill="var(--accent)"/>'
-  + '<rect x="5" y="31" width="38" height="4" rx="1.3" fill="var(--accent)"/>'
-  + '</svg><div class="brand-text"><span class="r1">ROYAL</span>'
-  + '<span class="r2">Imóveis RJ</span></div></div>';
+const MARCA = '<div class="brand"><img src="assets/royal-logo.png" alt="Royal Imóveis RJ"></div>';
 
 const CHECK = '<svg viewBox="0 0 10 10" aria-hidden="true"><polyline points="1,5.2 4,8 9,1.5"'
   + ' fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';

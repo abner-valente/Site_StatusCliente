@@ -73,18 +73,12 @@ a{color:var(--accent);}
 .wrap{max-width:1080px;margin:0 auto;}
 
 /* ---------- marca ---------- */
-.brand{display:flex;align-items:center;gap:11px;}
-.brand svg{width:44px;height:33px;display:block;}
-.brand-text{display:flex;flex-direction:column;line-height:1.05;}
-.brand .r1{
-  font-family:"Fraunces",serif;font-size:19px;font-weight:600;
-  letter-spacing:.18em;color:var(--cream);
-}
-.brand .r2{
-  font-family:"Manrope",sans-serif;font-size:9.5px;font-weight:700;
-  letter-spacing:.24em;text-transform:uppercase;color:var(--gold);
-  margin-top:3px;
-}
+/* Logo oficial da Royal, com o lettering junto. Antes era um desenho em SVG
+ * mais a palavra escrita ao lado — aproximação feita antes de termos o arquivo
+ * da marca. */
+.brand{display:flex;align-items:center;}
+.brand img{height:54px;width:auto;display:block;}
+.cartao .brand img{height:68px;}
 
 /* ---------- cartão central (login) ---------- */
 .centro{
