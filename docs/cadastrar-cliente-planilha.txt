@@ -1,0 +1,73 @@
+COMO CADASTRAR UM CLIENTE NOVO NA PLANILHA
+==========================================
+
+São 4 campos obrigatórios. Dois em cada aba.
+
+
+1) ABA "Fluxo A Vista" OU "Fluxo Financiado"
+--------------------------------------------
+Use a aba conforme a forma de pagamento.
+
+PREENCHER:
+  Cliente ..................... obrigatório
+  Imóvel / Empreendimento ..... obrigatório
+
+RECOMENDADO:
+  Data da Assinatura .......... sem ela o cliente não vê
+                                "há X dias de processo"
+  Corretor .................... aparece na tela do cliente
+
+DEIXAR EM BRANCO:
+  colunas de etapas ........... em branco já significa
+                                "Não iniciado"
+  uid_royal ................... o sistema preenche sozinho
+  ID .......................... o sistema não usa
+
+
+2) ABA "Titulares"
+------------------
+
+PREENCHER:
+  email ....................... obrigatório, é o login
+                                do cliente
+  imovel ...................... obrigatório, IGUAL ao da
+                                aba de fluxo
+
+OPCIONAL:
+  nome ........................ se vazio, aparece o e-mail
+
+DEIXAR EM BRANCO:
+  uid_processo ................ o sistema preenche sozinho
+  cliente_planilha ............ só referência visual
+
+
+CASAL, OU DUAS PESSOAS NO MESMO IMÓVEL
+--------------------------------------
+Duas linhas na aba Titulares:
+  - o mesmo imóvel nas duas
+  - o e-mail de cada pessoa
+
+Se os dois usam a mesma caixa de e-mail, repita o mesmo
+endereço nas duas linhas. Cada um recebe o próprio link.
+
+
+ATENÇÃO AO NOME DO IMÓVEL
+-------------------------
+Copie e cole entre as abas. Não redigite.
+
+O sistema perdoa acento, maiúscula e espaço sobrando.
+Não perdoa "Bl 2" virar "Bloco 2" — aí ele não acha o
+processo e avisa que a linha está sem vínculo.
+
+
+QUANDO O CLIENTE PASSA A TER ACESSO
+-----------------------------------
+O sistema sincroniza sozinho todo dia às 19h.
+O cliente cadastrado de manhã consegue entrar à noite.
+
+Se precisar antes disso, peça para rodar a sincronização
+manualmente.
+
+O cliente entra pelo site, digita o e-mail cadastrado e
+recebe um link de acesso. Não existe senha, e ele não se
+cadastra sozinho — só entra quem foi cadastrado aqui.
