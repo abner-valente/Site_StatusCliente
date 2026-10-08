@@ -131,6 +131,29 @@ Revogar titular apaga a linha de `titulares`, não a conta no Auth. Corrigir um
 e-mail deixa uma conta órfã com o endereço antigo — sem titular a RLS não
 mostra nada, então é inofensiva, mas aparece na lista de usuários do painel.
 
+**O aviso vai para a planilha, não só para o log.** Quem precisa corrigir a
+célula é o técnico da Royal, e ele não lê log do GitHub Actions. A coluna
+`Obs. Script` na aba `Titulares` é mão única — o sync escreve e apaga, ninguém
+digita. Ele grava só o que mudou, para não gastar cota da API nem encher o
+histórico de revisões da planilha todo dia.
+
+A coluna é **opcional**: ausente, o sync avisa no log e segue. De propósito
+ele não cria o cabeçalho sozinho — a primeira coluna livre pode ser vizinha de
+algo que o time usa, e estrutura da planilha do cliente não é nossa para
+mexer. `gerar_titulares.py` já inclui a coluna no CSV de projeto novo.
+
+**E-mail imprestável congela o processo em vez de revogar.** Sem isso, um erro
+de digitação deixaria a linha fora de `desejados`, o sync leria como "titular
+saiu da aba" e revogaria — então um dedo errado tiraria do ar o acesso de um
+cliente que funcionava, e o endereço novo nem seria criado, porque é inválido.
+O cliente ficaria sem nada. Congelado, o acesso antigo continua valendo até a
+correção. Por isso `ler_titulares` devolve a linha ruim, com `email` vazio, em
+vez de descartá-la: é o que permite ao sync saber que o processo tem pendência.
+
+`carga_inicial.py` não tem essa etapa de aviso, então lá a linha ruim é
+descartada com aviso no terminal — gravar e-mail vazio criaria titular que
+nunca entra.
+
 **A CSP tem a URL do Supabase fixa** em `netlify.toml`, em `connect-src`.
 Trocar de projeto exige mudar lá junto com `site/config.js`. Esquecer publica
 um site que carrega bonito e falha em toda consulta.

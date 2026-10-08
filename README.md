@@ -134,8 +134,19 @@ Flags:
 | `--forcar` | ignora a guarda de sanidade, **depois** de conferir o plano |
 | `--sem-provisionar` | não cria as contas de login ao final |
 
-Código de saída: `0` tudo bem, `1` erro de configuração ou de planilha,
-**`2` a guarda de sanidade barrou** — nada foi gravado.
+Códigos de saída:
+
+| | |
+| --- | --- |
+| `0` | tudo bem |
+| `1` | erro de configuração, de rede ou de planilha |
+| `2` | **a guarda de sanidade barrou** — nada foi gravado |
+| `3` | gravou o que podia, mas há **linha pendente** na aba `Titulares` |
+
+A diferença entre 2 e 3 decide o que fazer. No `2` o banco está intacto e
+alguém precisa autorizar a mudança. No `3` o sync funcionou; alguém ficou sem
+acesso por célula malpreenchida, e quem resolve é o técnico da Royal, na
+planilha — o recado de cada linha já está lá, na coluna `Obs. Script`.
 
 A guarda barra quando a mudança é grande demais para ser rotina: muito status
 mudando de uma vez, processo que sumiu da planilha, uid que o banco não
@@ -145,6 +156,16 @@ reestruturada ou aba errada. Se a mudança for legítima mesmo, `--forcar`.
 **Por que simula por padrão:** o sync revoga acesso e grava histórico, duas
 coisas que dão trabalho para desfazer. A simulação é a chance de ver a lista
 antes.
+
+**O sync conversa de volta pela coluna `Obs. Script`**, na aba `Titulares`.
+Quando acha problema numa linha — e-mail com caractere estranho, imóvel que não
+casa com processo nenhum, imóvel repetido em dois — escreve ali o que fazer, em
+português e sem jargão, e apaga quando o problema sai. É mão única: ninguém
+digita nessa coluna.
+
+Existe porque o técnico da Royal não lê log do GitHub Actions, mas abre a
+planilha todo dia. A coluna é opcional; sem ela o aviso fica só no log, e o
+sync avisa que ela falta.
 
 ---
 

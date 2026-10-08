@@ -39,6 +39,46 @@ OPCIONAL:
 DEIXAR EM BRANCO:
   uid_processo ................ o sistema preenche sozinho
   cliente_planilha ............ só referência visual
+  Obs. Script ................. o sistema escreve aqui;
+                                não digite nada
+
+
+A COLUNA "Obs. Script" — LEIA TODO DIA
+--------------------------------------
+O sistema roda às 19h e, se achar problema em alguma
+linha, escreve o recado nessa coluna. Ele apaga sozinho
+quando o problema for resolvido.
+
+Dois tipos de recado:
+
+  "ATENÇÃO: ..."
+      O cliente TEM acesso. Só a célula está com
+      caractere estranho. Corrija quando der.
+
+  "SEM ACESSO: ..."
+      O cliente NÃO consegue entrar. Precisa de
+      correção para funcionar.
+
+Cada recado diz o que fazer. Depois de corrigir, o aviso
+sai no dia seguinte.
+
+
+CUIDADO AO COLAR E-MAIL
+-----------------------
+E-mail copiado de Word, PDF ou mensagem pode vir com
+caractere que PARECE certo e não é.
+
+Exemplo real: um endereço veio com "ﬂ" — um símbolo
+único, em vez das letras f e l. Na tela fica idêntico.
+Para o Gmail, é outro endereço, e o cliente nunca
+receberia o link.
+
+Olhando não se descobre. Por isso:
+
+  DIGITE o e-mail à mão, não cole.
+
+Se precisar colar, o sistema avisa na coluna
+"Obs. Script" quando encontrar algo.
 
 
 CASAL, OU DUAS PESSOAS NO MESMO IMÓVEL

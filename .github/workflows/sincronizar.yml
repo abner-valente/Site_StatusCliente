@@ -118,14 +118,28 @@ jobs:
           echo "Executando: python sincronizar.py $args"
           python sincronizar.py $args
 
-      # Código de saída 2 é a guarda de sanidade, não uma falha de
-      # infraestrutura. O job falha de propósito, para a notificação chegar —
-      # é o aviso de que algo grande mudou na planilha e ninguém avisou.
+      # Saídas 2 e 3 não são falha de infraestrutura. O job falha de propósito
+      # nos dois casos, porque é a notificação do GitHub que faz alguém olhar.
+      #
+      #   2  guarda de sanidade: NADA foi gravado
+      #   3  gravou o que podia, mas há linha pendente na aba Titulares
+      #
+      # A diferença importa na hora de decidir o que fazer: na 2 o banco está
+      # intacto e alguém precisa autorizar; na 3 o sync funcionou e quem
+      # resolve é o técnico da Royal, na planilha.
       - name: Explicar a falha
         if: failure()
         run: |
-          echo "::warning::Sincronização não concluída. Saída 2 = guarda de sanidade"
-          echo "(mudança em massa, processo sumido, uid desconhecido ou muitos"
-          echo "acessos revogados de uma vez)."
-          echo "Confira o log acima e, se a mudança for legítima, rode este"
-          echo "workflow manualmente com 'forcar' marcado."
+          echo "::warning::Sincronização terminou com falha. Veja o código de saída acima."
+          echo ""
+          echo "Saída 2 = guarda de sanidade. NADA foi gravado (mudança em massa,"
+          echo "processo sumido, uid desconhecido ou muitos acessos revogados de"
+          echo "uma vez). Se a mudança for legítima, rode este workflow"
+          echo "manualmente com 'forcar' marcado."
+          echo ""
+          echo "Saída 3 = linha pendente na aba Titulares. O que dava para"
+          echo "sincronizar FOI gravado; alguém ficou sem acesso por causa de"
+          echo "célula malpreenchida. O detalhe de cada linha já está na coluna"
+          echo "'Obs. Script' da planilha — avise o técnico da Royal."
+          echo ""
+          echo "Outro código = erro de verdade (configuração, rede, planilha)."

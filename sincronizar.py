@@ -196,10 +196,8 @@ def principal() -> int:
     # ruim: a planilha é a fonte da verdade (regra 8), então o valor ruim fica
     # lá para sempre e volta a aparecer no próximo cadastro feito do mesmo
     # jeito. Avisar qual célula editar é o que fecha o ciclo.
-    corrigidos = [
-        t for t in titulares_planilha
-        if t.email_bruto.strip() != t.email
-    ]
+    corrigidos = [t for t in titulares_planilha
+                  if t.problema and t.email and t.email_bruto.strip() != t.email]
     if corrigidos:
         print(f"\nE-MAILS AJUSTADOS NA LEITURA ({len(corrigidos)}):")
         for t in corrigidos:
@@ -228,6 +226,13 @@ def principal() -> int:
     ambiguos, sem_processo = [], []
 
     desejados: dict[tuple[str, str], dict] = {}
+    email_ruim: list = []
+
+    # Processos com alguma linha pendente na aba Titulares. O acesso que já
+    # existe neles fica congelado até o técnico resolver — ver o porquê junto
+    # ao cálculo de `a_remover`.
+    protegidos: set[str] = set()
+
     for t in titulares_planilha:
         uid = t.uid_processo
         if not uid:
@@ -237,10 +242,20 @@ def principal() -> int:
                 titulares_a_carimbar.append((t.numero_linha, uid))
             elif len(candidatos) > 1:
                 ambiguos.append(t)
+                if len(set(candidatos)) == 1:
+                    protegidos.add(candidatos[0])
                 continue
             else:
                 sem_processo.append(t)
                 continue
+
+        # E-mail que não dá para usar não vira acesso, mas também não pode
+        # fazer o processo perder o que já tem: a linha existe, o titular
+        # existe, só o texto da célula está ruim.
+        if not t.email:
+            email_ruim.append(t)
+            protegidos.add(uid)
+            continue
 
         # Indexado por UID, não pelo id do banco: processo criado nesta mesma
         # execução ainda não tem id, e o titular dele seria descartado — que é
@@ -261,6 +276,19 @@ def principal() -> int:
         pid = uid_para_id.get(uid)
         if pid is None:
             continue                      # processo novo: ainda não tem titular
+
+        # Processo com linha pendente não perde acesso. Um e-mail digitado
+        # errado deixaria a linha fora de `desejados`, o sync leria isso como
+        # "titular saiu da aba" e revogaria — então um erro de digitação
+        # tiraria do ar o acesso de um cliente que estava funcionando, e o
+        # endereço novo nem seria criado, porque está inválido. O cliente
+        # ficaria sem nada.
+        #
+        # Congelar é o lado certo para errar: o acesso antigo continua
+        # valendo, e a observação na planilha pede a correção.
+        if uid in protegidos:
+            continue
+
         for t in no_banco_titulares.get(pid, []):
             if (uid, (t.get("email") or "").lower()) not in desejados:
                 a_remover.append(t)
@@ -288,12 +316,48 @@ def principal() -> int:
             print(f"  {t['email']:34} {t['nome']}")
 
     for t in ambiguos:
-        print(f"  IMÓVEL AMBÍGUO em Titulares linha {t.numero_linha} ({t.email}): "
-              f"{t.imovel!r} aparece em mais de um processo. Preencha o "
-              f"uid_processo nessa linha.")
+        print(f"  IMÓVEL AMBÍGUO em Titulares linha {t.numero_linha} "
+              f"({t.email_bruto}): {t.imovel!r} aparece em mais de um "
+              f"processo. Preencha o uid_processo nessa linha.")
     for t in sem_processo:
-        print(f"  SEM PROCESSO em Titulares linha {t.numero_linha} ({t.email}): "
-              f"não achei processo com o imóvel {t.imovel!r}.")
+        print(f"  SEM PROCESSO em Titulares linha {t.numero_linha} "
+              f"({t.email_bruto}): não achei processo com o imóvel "
+              f"{t.imovel!r}.")
+    for t in email_ruim:
+        print(f"  E-MAIL INVÁLIDO em Titulares linha {t.numero_linha}: "
+              f"{t.email_bruto!r} — sem acesso para esta pessoa. O acesso que "
+              f"já existia no processo foi mantido.")
+
+    # ---- recado na planilha -------------------------------------------
+    # Log do Actions é lido por quem programa, e quem precisa corrigir a
+    # célula é o técnico da Royal. A coluna "Obs. Script" é o canal que chega
+    # nele: ele abre a planilha todo dia de qualquer forma.
+    obs_desejada: dict[int, str] = {t.numero_linha: "" for t in titulares_planilha}
+    for t in titulares_planilha:
+        if t.problema:
+            obs_desejada[t.numero_linha] = t.problema
+    for t in ambiguos:
+        obs_desejada[t.numero_linha] = (
+            f"SEM ACESSO: o imóvel {t.imovel!r} aparece em mais de um "
+            "processo, então não dá para saber de qual é este titular. "
+            "Preencha a coluna uid_processo nesta linha."
+        )
+    for t in sem_processo:
+        obs_desejada[t.numero_linha] = (
+            f"SEM ACESSO: não existe processo com o imóvel {t.imovel!r}. "
+            "Confira se o nome está igual ao da aba de fluxo — copie e cole "
+            "de lá, não redigite."
+        )
+
+    # Só o que mudou. Reescrever a coluna toda todo dia gastaria cota da API
+    # e encheria o histórico de revisões da planilha de alteração sem efeito.
+    obs_a_escrever = [
+        (t.numero_linha, obs_desejada[t.numero_linha])
+        for t in titulares_planilha
+        if obs_desejada[t.numero_linha] != t.obs_atual
+    ]
+
+    pendencias = len(email_ruim) + len(ambiguos) + len(sem_processo)
 
     # ---- defesa 3: guarda de sanidade ---------------------------------
     try:
@@ -307,7 +371,10 @@ def principal() -> int:
 
     if not args.aplicar:
         print("\nNada foi gravado. Para aplicar:  python sincronizar.py --aplicar")
-        return 0
+        if obs_a_escrever:
+            print(f"Com --aplicar, {len(obs_a_escrever)} célula(s) da coluna "
+                  f"{planilha.COLUNA_OBS!r} seriam atualizadas.")
+        return 3 if pendencias else 0
 
     # ---- escrita ------------------------------------------------------
     # Onde carimbar. Só consulta a planilha quando há algo a escrever, para
@@ -359,6 +426,25 @@ def principal() -> int:
     # continuar idêntico.
     for numero_linha, uid in titulares_a_carimbar:
         fonte.escrever_celula(planilha.ABA_TITULARES, numero_linha, col_uid_titulares, uid)
+
+    # Recado para o técnico, na própria planilha. Em lote: uma chamada de API
+    # em vez de uma por linha.
+    if obs_a_escrever:
+        col_obs = planilha.info_coluna_obs(fonte)
+        if col_obs is None:
+            print(f"\nAVISO: a aba {planilha.ABA_TITULARES} não tem a coluna "
+                  f"{planilha.COLUNA_OBS!r}.")
+            print("  Crie essa coluna para o técnico receber os avisos na")
+            print("  planilha. Sem ela, eles só aparecem aqui no log.")
+        else:
+            fonte.escrever_celulas(
+                planilha.ABA_TITULARES,
+                [(lin, col_obs, texto) for lin, texto in obs_a_escrever],
+            )
+            escritos = sum(1 for _, texto in obs_a_escrever if texto)
+            limpos = len(obs_a_escrever) - escritos
+            print(f"\n{planilha.COLUNA_OBS}: {escritos} aviso(s) escrito(s), "
+                  f"{limpos} apagado(s).")
 
     for pid, campos in dados_alterados:
         sb.table("processos").update(campos).eq("id", pid).execute()
@@ -438,6 +524,20 @@ def principal() -> int:
         print(f"contas criadas       : {len(res_acessos.criados)}")
         if res_acessos.sem_acesso:
             print(f"AINDA SEM ACESSO     : {len(res_acessos.sem_acesso)}")
+
+    # Saída 3: gravou tudo que podia, mas alguém ficou sem acesso por causa de
+    # célula malpreenchida. Não é falha de infraestrutura e não é a guarda —
+    # é pendência humana, e precisa de notificação própria. Sem isso a
+    # execução fica verde no Actions enquanto um cliente não consegue entrar,
+    # que é exatamente o modo de falha silenciosa que este projeto combate.
+    if pendencias:
+        print(f"\n>>> {pendencias} LINHA(S) PENDENTE(S) NA ABA "
+              f"{planilha.ABA_TITULARES} <<<", file=sys.stderr)
+        print(f"O que deu para sincronizar foi gravado. O detalhe de cada "
+              f"linha está na coluna {planilha.COLUNA_OBS!r} da planilha, "
+              f"para o técnico corrigir.", file=sys.stderr)
+        return 3
+
     return 0
 
 

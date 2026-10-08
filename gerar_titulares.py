@@ -114,7 +114,11 @@ def principal() -> int:
     # utf-8-sig: o Excel em português só reconhece os acentos com BOM.
     # delimitador ';': é o separador de lista padrão do Excel pt-BR.
     with open(ARQUIVO_SAIDA, "w", encoding="utf-8-sig", newline="") as f:
-        campos = ["uid_processo", "nome", "email", "imovel", "cliente_planilha"]
+        # A coluna de observação vai vazia: quem escreve nela é o sync. Vir no
+        # cabeçalho desde o início evita que a aba nasça sem ela e o aviso de
+        # célula malpreenchida fique só no log, onde o técnico não olha.
+        campos = ["uid_processo", "nome", "email", "imovel", "cliente_planilha",
+                  planilha.COLUNA_OBS]
         escritor = csv.DictWriter(f, fieldnames=campos, delimiter=";")
         escritor.writeheader()
         escritor.writerows(linhas_csv)
@@ -138,6 +142,10 @@ def principal() -> int:
     print("O sync lê as colunas uid_processo, nome e email pelo nome do")
     print("cabeçalho. As colunas imovel e cliente_planilha existem só para")
     print("ajudar quem preenche, e são ignoradas.")
+    print()
+    print(f"A coluna {planilha.COLUNA_OBS!r} é mão única: o sync escreve ali")
+    print("quando acha problema numa linha, e apaga quando o problema sai.")
+    print("Deixe em branco e não digite nada nela.")
     return 0
 
 

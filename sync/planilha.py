@@ -28,6 +28,11 @@ ABA_TITULARES = "Titulares"
 # Cabeçalho da coluna de identidade que o sync carimba.
 COLUNA_UID = "uid_royal"
 
+# Coluna da aba Titulares onde o sync escreve recado para o técnico da Royal.
+# Mão única: o sync escreve, ninguém digita ali. Opcional — sem ela o sync
+# só avisa no log, que o técnico não lê.
+COLUNA_OBS = "Obs. Script"
+
 # Status aceitos, já normalizados. Bate com o CHECK das tabelas no banco.
 STATUS_VALIDOS = {
     "nao_iniciado", "em_andamento", "pendente",
@@ -64,6 +69,12 @@ class LinhaTitular:
     # planilha é a fonte da verdade (regra 8). O sync usa isto para avisar
     # qual célula corrigir à mão.
     email_bruto: str = ""
+    # Frase curta para a coluna "Obs. Script", escrita para o técnico da
+    # Royal. None = célula do e-mail está boa.
+    problema: str | None = None
+    # Texto que já está na coluna de observação, para o sync escrever só o
+    # que mudou em vez de reescrever a coluna toda a cada execução.
+    obs_atual: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -127,8 +138,26 @@ INVISIVEIS = {
 FORMATO_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
 
 
-def normalizar_email(bruto: str, onde: str = "") -> str:
-    """Limpa um endereço de e-mail vindo da planilha.
+@dataclass(frozen=True)
+class EmailAnalisado:
+    """Resultado da limpeza de um endereço vindo da planilha.
+
+    `problema` é escrito para o técnico da Royal ler na própria planilha, não
+    para programador: frase curta, sem jargão, dizendo o que fazer.
+    """
+
+    bruto: str
+    limpo: str                  # "" quando não dá para usar
+    problema: str | None        # None = célula está boa
+    corrigido: bool             # dá para usar, mas o texto da célula está ruim
+
+    @property
+    def utilizavel(self) -> bool:
+        return bool(self.limpo)
+
+
+def analisar_email(bruto: str) -> EmailAnalisado:
+    """Limpa o endereço e **descreve** o que achou, sem levantar erro.
 
     Minúsculas são o menor dos problemas: e-mail não diferencia caixa, e tanto
     o Supabase quanto a tela de login já convertem. O que de fato morde é o
@@ -139,57 +168,89 @@ def normalizar_email(bruto: str, onde: str = "") -> str:
     Minúsculo não conserta: a ligadura já é minúscula. Quem conserta é o NFKC,
     que decompõe `ﬂ` em `fl`, `＠` de largura total em `@`, e companhia.
 
-    A ordem importa. NFKC primeiro, minúsculas depois — invertido, um `Ǆ` viria
-    a ser tratado duas vezes.
+    A ordem importa: NFKC antes da caixa.
 
-    O que o NFKC não resolve, esta função **recusa** em vez de adivinhar, no
-    mesmo espírito de `normalizar_status` e `normalizar_data`. Acento em
-    endereço é o caso claro: `josé@gmail.com` e `jose@gmail.com` são caixas
-    diferentes, e tirar o acento por conta própria mandaria o link de acesso
-    do cliente para outra pessoa. Melhor parar o sync e pedir revisão.
+    O que o NFKC não resolve, esta função **recusa** em vez de adivinhar.
+    Acento é o caso claro: `josé@gmail.com` e `jose@gmail.com` são caixas de
+    duas pessoas, e tirar o acento por conta própria mandaria o link de acesso
+    do cliente para a errada.
+
+    Não levanta erro de propósito. Parar aqui mataria o sync inteiro por causa
+    de uma célula: ninguém atualizaria e — pior — a observação na planilha
+    nunca seria escrita, justamente a que avisaria o técnico. Quem decide o
+    que fazer é `sincronizar.py`.
     """
-    t = (bruto or "").strip()
+    bruto = bruto or ""
+    t = bruto.strip()
     if not t:
-        return ""
+        return EmailAnalisado(bruto, "", None, False)
 
-    local = f" ({onde})" if onde else ""
-
-    # NFKC antes da caixa: resolve ligadura, largura total e espaço estranho.
     t = unicodedata.normalize("NFKC", t)
     t = t.translate(INVISIVEIS)
     t = t.strip().lower()
 
+    def ruim(msg: str) -> EmailAnalisado:
+        return EmailAnalisado(bruto, "", f"SEM ACESSO: {msg}", False)
+
     if not t:
-        raise PlanilhaError(
-            f"E-mail{local} só tem caracteres invisíveis: {bruto!r}. "
-            "Apague a célula e digite o endereço à mão."
+        return ruim(
+            "a célula do e-mail só tem caracteres invisíveis. Apague a célula "
+            "e digite o endereço à mão."
         )
 
     if any(c.isspace() for c in t):
-        raise PlanilhaError(
-            f"E-mail{local} tem espaço no meio: {t!r}. Endereço não pode "
-            "ter espaço — confira se faltou ou sobrou caractere e redigite."
+        return ruim(
+            "o e-mail tem espaço no meio. Apague a célula e digite o endereço "
+            "à mão, sem espaços."
         )
 
     fora = sorted({c for c in t if ord(c) > 127})
     if fora:
-        detalhe = ", ".join(
-            f"{c!r} (U+{ord(c):04X} {unicodedata.name(c, '?')})" for c in fora
-        )
-        raise PlanilhaError(
-            f"E-mail{local} tem caractere que não é ASCII: {t!r} — {detalhe}. "
-            "O sync não adivinha a troca, porque errar manda o link de acesso "
-            "para o endereço de outra pessoa. Apague a célula e digite o "
-            "endereço à mão, sem colar."
+        amostra = " ".join(repr(c) for c in fora)
+        return ruim(
+            f"o e-mail tem caractere que não existe em endereço: {amostra}. "
+            "Pode ser acento ou um símbolo parecido com letra. Apague a "
+            "célula e digite o endereço à mão, sem colar."
         )
 
     if not FORMATO_EMAIL.fullmatch(t):
-        raise PlanilhaError(
-            f"E-mail{local} não tem formato de endereço: {t!r}. "
-            "Esperado algo como nome@dominio.com."
+        return ruim(
+            "o e-mail não tem formato de endereço (falta @ ou o domínio). "
+            "Confira e digite de novo."
         )
 
-    return t
+    if t != bruto.strip().lower():
+        # Deu para usar, mas a célula tem caractere que só parece certo. Não
+        # avisar deixaria o texto ruim na planilha para sempre, e ele voltaria
+        # no próximo cadastro feito do mesmo jeito (copiando de documento).
+        return EmailAnalisado(
+            bruto, t,
+            f"ATENÇÃO: o e-mail tinha caractere especial, provavelmente de "
+            f"cópia de Word ou PDF. O sistema está usando {t}. Apague a "
+            f"célula e digite o endereço à mão para tirar este aviso.",
+            True,
+        )
+
+    return EmailAnalisado(bruto, t, None, False)
+
+
+def normalizar_email(bruto: str, onde: str = "") -> str:
+    """Igual a `analisar_email`, mas **para** no primeiro problema.
+
+    Serve a quem prefere falhar na hora; o sync usa `analisar_email`, que
+    descreve o problema sem interromper a execução.
+    """
+    r = analisar_email(bruto)
+    if r.utilizavel:
+        return r.limpo
+    if r.problema is None:
+        return ""
+
+    local = f" ({onde})" if onde else ""
+    # O texto de `problema` é escrito para o técnico; aqui vira mensagem de
+    # erro, então ganha a localização e o valor cru entre aspas.
+    detalhe = r.problema.removeprefix("SEM ACESSO: ")
+    raise PlanilhaError(f"E-mail{local} {bruto!r}: {detalhe}")
 
 
 def normalizar_data(bruto: str) -> str | None:
@@ -447,6 +508,22 @@ def info_coluna_uid_titulares(fonte) -> tuple[str, int]:
     return letra_coluna(idx), i_cab + 1
 
 
+def info_coluna_obs(fonte) -> str | None:
+    """Letra da coluna de observação na aba Titulares, ou None se não existir.
+
+    Diferente de `info_coluna_uid_titulares`, esta **não** aponta a primeira
+    coluna livre quando a coluna falta. Criar cabeçalho sozinho na planilha do
+    cliente é mexer em estrutura que não é nossa, e a primeira livre pode ser
+    vizinha de algo que o time usa. Ausente, o sync avisa no log e segue.
+    """
+    linhas = fonte.ler_aba(ABA_TITULARES)
+    if not linhas:
+        return None
+    i_cab = _cabecalho_titulares(linhas)
+    idx = mapear_colunas(linhas[i_cab]).get(normalizar_rotulo(COLUNA_OBS))
+    return None if idx is None else letra_coluna(idx)
+
+
 def ler_titulares(fonte) -> list[LinhaTitular]:
     """Lê a aba Titulares. Ausente, devolve lista vazia.
 
@@ -478,6 +555,7 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
     i_nome = colunas.get("nome")
     i_email = colunas.get("email")
     i_imovel = colunas.get("imovel / empreendimento", colunas.get("imovel"))
+    i_obs = colunas.get(normalizar_rotulo(COLUNA_OBS))
 
     titulares: list[LinhaTitular] = []
     for deslocamento, linha in enumerate(linhas[i_cab + 1:], start=1):
@@ -491,25 +569,32 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
         email_bruto = valor(i_email)
         if not email_bruto:
             continue
-        email = normalizar_email(
-            email_bruto, onde=f"aba {ABA_TITULARES}, linha {numero_linha}"
-        )
+
+        # Linha com e-mail ruim continua sendo devolvida, com `email` vazio.
+        # É o que permite ao sync escrever a observação na planilha e, mais
+        # importante, saber que aquele processo tem pendência — sem isso ele
+        # trataria a linha como "titular que saiu da aba" e revogaria o
+        # acesso que ainda funciona.
+        analise = analisar_email(email_bruto)
+        email = analise.limpo
 
         uid, imovel = valor(i_uid), valor(i_imovel)
         if not uid and not imovel:
             raise PlanilhaError(
                 f"Aba {ABA_TITULARES!r}, linha {numero_linha}: "
-                f"{email} não tem uid_processo nem imóvel. Preencha um dos dois "
-                "para o sync saber a qual processo o acesso pertence."
+                f"{email_bruto} não tem uid_processo nem imóvel. Preencha um "
+                "dos dois para o sync saber a qual processo o acesso pertence."
             )
 
         titulares.append(LinhaTitular(
             numero_linha=numero_linha,
             uid_processo=uid or None,
             imovel=imovel,
-            nome=valor(i_nome) or email,
+            nome=valor(i_nome) or email or email_bruto,
             email=email,
             email_bruto=email_bruto,
+            problema=analise.problema,
+            obs_atual=valor(i_obs),
         ))
 
     return titulares

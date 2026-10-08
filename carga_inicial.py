@@ -179,9 +179,18 @@ def principal() -> int:
             # deduplicar, o upsert tenta tocar a mesma linha duas vezes na
             # mesma instrução e o Postgres recusa com o código 21000.
             por_chave: dict[tuple[str, str], dict] = {}
-            orfaos, fundidos = [], []
+            orfaos, fundidos, ruins = [], [], []
 
             for t in titulares:
+                # `ler_titulares` devolve a linha mesmo com e-mail imprestável,
+                # com `email` vazio, para o sync poder escrever a observação na
+                # planilha. Aqui não existe essa etapa, então a linha é
+                # descartada com aviso — gravar e-mail vazio criaria titular
+                # que nunca consegue entrar.
+                if not t.email:
+                    ruins.append(t)
+                    continue
+
                 pid = uid_para_id.get(t.uid_processo)
                 if pid is None:
                     orfaos.append(t)
@@ -220,6 +229,11 @@ def principal() -> int:
             for t in orfaos:
                 print(f"  AVISO: uid_processo {t.uid_processo!r} de {t.email} "
                       f"não existe no banco — titular ignorado")
+
+            for t in ruins:
+                print(f"  AVISO: linha {t.numero_linha} tem e-mail "
+                      f"imprestável ({t.email_bruto!r}) — titular ignorado")
+                print(f"         {t.problema}")
     print()
 
     # --- arquivo de uids -------------------------------------------------

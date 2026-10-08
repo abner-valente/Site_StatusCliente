@@ -36,8 +36,20 @@ class FonteDePlanilha(Protocol):
     def escrever_celula(self, aba: str, linha: int, coluna: str, valor: str) -> None:
         """Grava uma célula. `linha` é 1-based, `coluna` é letra ("Q").
 
-        Usado para uma coisa só: carimbar o uid_royal em linhas novas. Não é
-        sincronização de duas vias — é identidade, e nenhum humano digita ali.
+        Usado para carimbar o uid_royal em linhas novas. Não é sincronização
+        de duas vias — é identidade, e nenhum humano digita ali.
+        """
+        ...
+
+    def escrever_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str]]
+    ) -> None:
+        """Grava várias células de uma vez. Cada item é (linha, coluna, valor).
+
+        Existe por causa da cota: a API do Sheets permite 60 escritas por
+        minuto por usuário, e a coluna de observação toca uma célula por
+        titular. Com 26 titulares, uma chamada por célula gastaria metade da
+        cota numa execução que não mudou quase nada.
         """
         ...
 
@@ -144,6 +156,21 @@ class FonteGoogleSheets:
         planilha = self._abrir()
         planilha.worksheet(aba).update_acell(f"{coluna}{linha}", valor)
 
+    def escrever_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str]]
+    ) -> None:
+        if not celulas:
+            return
+        planilha = self._abrir()
+        # value_input_option RAW: o texto vai para a célula como está. Sem
+        # isso o Sheets interpreta o conteúdo, e uma observação começando com
+        # "=" ou "-" viraria fórmula ou número negativo.
+        planilha.worksheet(aba).batch_update(
+            [{"range": f"{col}{lin}", "values": [[valor]]}
+             for lin, col, valor in celulas],
+            value_input_option="RAW",
+        )
+
     def descrever(self) -> str:
         return f"Google Sheets ({self.planilha_id[:6]}...{self.planilha_id[-4:]})"
 
@@ -189,10 +216,21 @@ class FonteXlsxLocal:
         return linhas
 
     def escrever_celula(self, aba: str, linha: int, coluna: str, valor: str) -> None:
+        self.escrever_celulas(aba, [(linha, coluna, valor)])
+
+    def escrever_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str]]
+    ) -> None:
+        if not celulas:
+            return
+
         import openpyxl
 
+        # Um load/save para o lote inteiro. Além da lentidão, cada save é uma
+        # chance de perder a validação de dados — ver o aviso da classe.
         wb = openpyxl.load_workbook(self.caminho)
-        wb[aba][f"{coluna}{linha}"] = valor
+        for linha, coluna, valor in celulas:
+            wb[aba][f"{coluna}{linha}"] = valor
         wb.save(self.caminho)
         wb.close()
 
