@@ -101,6 +101,20 @@ formatação vem o número de série, que não depende de idioma.
 e **levanta erro** no que não reconhecer — data errada vira "há X dias" errado
 na tela do cliente.
 
+**E-mail colado do Word ou de PDF pode trazer ligadura tipográfica.** No
+primeiro dia em produção, um endereço na aba `Titulares` veio com `ﬂ`
+(U+FB02, um caractere único) em vez das letras `f` e `l`:
+`re.ﬂacardoso@gmail.com`. O Gmail não conhece esse endereço — o link de acesso
+nunca chegaria, e nada na tela do cliente diria por quê.
+
+Pior, o sync quebrava ao **imprimir** a lista, antes da guarda, porque o
+terminal do Windows é cp1252. O erro falava de codec e apontava para o
+suspeito errado. `sync/__init__.py` agora força UTF-8 na saída, então o script
+mostra o problema em vez de morrer.
+
+Isso não dá erro de validação: é um e-mail sintaticamente válido. Vale a olhada
+em endereço que o técnico tenha copiado de documento formatado.
+
 **A CSP tem a URL do Supabase fixa** em `netlify.toml`, em `connect-src`.
 Trocar de projeto exige mudar lá junto com `site/config.js`. Esquecer publica
 um site que carrega bonito e falha em toda consulta.
