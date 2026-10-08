@@ -59,6 +59,11 @@ class LinhaTitular:
     imovel: str                # alternativa ao uid, mais fácil de digitar
     nome: str
     email: str
+    # O texto exatamente como está na célula. Guardado porque quando a
+    # normalização muda o endereço, a planilha segue com o valor ruim — e a
+    # planilha é a fonte da verdade (regra 8). O sync usa isto para avisar
+    # qual célula corrigir à mão.
+    email_bruto: str = ""
 
 
 # ---------------------------------------------------------------------------
@@ -102,6 +107,88 @@ def normalizar_status(bruto: str) -> str:
             f"Status desconhecido na planilha: {bruto!r}. "
             f"Esperado um de: {', '.join(sorted(STATUS_VALIDOS))}"
         )
+    return t
+
+
+# Caracteres sem desenho que sobrevivem ao strip e ao NFKC. Chegam por cópia
+# de página web ou de documento formatado, e deixam o endereço visualmente
+# idêntico ao correto — o pior tipo de defeito, porque ninguém acha olhando.
+INVISIVEIS = {
+    0x00AD: None,   # soft hyphen
+    0x200B: None,   # zero width space
+    0x200C: None,   # zero width non-joiner
+    0x200D: None,   # zero width joiner
+    0x200E: None,   # left-to-right mark
+    0x200F: None,   # right-to-left mark
+    0x2060: None,   # word joiner
+    0xFEFF: None,   # byte order mark
+}
+
+FORMATO_EMAIL = re.compile(r"[^@\s]+@[^@\s]+\.[^@\s]+")
+
+
+def normalizar_email(bruto: str, onde: str = "") -> str:
+    """Limpa um endereço de e-mail vindo da planilha.
+
+    Minúsculas são o menor dos problemas: e-mail não diferencia caixa, e tanto
+    o Supabase quanto a tela de login já convertem. O que de fato morde é o
+    caractere que *parece* certo e não é.
+
+    No primeiro dia em produção um endereço veio com `ﬂ` (U+FB02), a ligadura
+    tipográfica que o Word e o PDF colocam sozinhos no lugar de `f` + `l`.
+    Minúsculo não conserta: a ligadura já é minúscula. Quem conserta é o NFKC,
+    que decompõe `ﬂ` em `fl`, `＠` de largura total em `@`, e companhia.
+
+    A ordem importa. NFKC primeiro, minúsculas depois — invertido, um `Ǆ` viria
+    a ser tratado duas vezes.
+
+    O que o NFKC não resolve, esta função **recusa** em vez de adivinhar, no
+    mesmo espírito de `normalizar_status` e `normalizar_data`. Acento em
+    endereço é o caso claro: `josé@gmail.com` e `jose@gmail.com` são caixas
+    diferentes, e tirar o acento por conta própria mandaria o link de acesso
+    do cliente para outra pessoa. Melhor parar o sync e pedir revisão.
+    """
+    t = (bruto or "").strip()
+    if not t:
+        return ""
+
+    local = f" ({onde})" if onde else ""
+
+    # NFKC antes da caixa: resolve ligadura, largura total e espaço estranho.
+    t = unicodedata.normalize("NFKC", t)
+    t = t.translate(INVISIVEIS)
+    t = t.strip().lower()
+
+    if not t:
+        raise PlanilhaError(
+            f"E-mail{local} só tem caracteres invisíveis: {bruto!r}. "
+            "Apague a célula e digite o endereço à mão."
+        )
+
+    if any(c.isspace() for c in t):
+        raise PlanilhaError(
+            f"E-mail{local} tem espaço no meio: {t!r}. Endereço não pode "
+            "ter espaço — confira se faltou ou sobrou caractere e redigite."
+        )
+
+    fora = sorted({c for c in t if ord(c) > 127})
+    if fora:
+        detalhe = ", ".join(
+            f"{c!r} (U+{ord(c):04X} {unicodedata.name(c, '?')})" for c in fora
+        )
+        raise PlanilhaError(
+            f"E-mail{local} tem caractere que não é ASCII: {t!r} — {detalhe}. "
+            "O sync não adivinha a troca, porque errar manda o link de acesso "
+            "para o endereço de outra pessoa. Apague a célula e digite o "
+            "endereço à mão, sem colar."
+        )
+
+    if not FORMATO_EMAIL.fullmatch(t):
+        raise PlanilhaError(
+            f"E-mail{local} não tem formato de endereço: {t!r}. "
+            "Esperado algo como nome@dominio.com."
+        )
+
     return t
 
 
@@ -399,24 +486,30 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
                 return ""
             return (linha[idx] or "").strip()
 
-        email = valor(i_email).lower()
-        if not email:
+        numero_linha = i_cab + 1 + deslocamento
+
+        email_bruto = valor(i_email)
+        if not email_bruto:
             continue
+        email = normalizar_email(
+            email_bruto, onde=f"aba {ABA_TITULARES}, linha {numero_linha}"
+        )
 
         uid, imovel = valor(i_uid), valor(i_imovel)
         if not uid and not imovel:
             raise PlanilhaError(
-                f"Aba {ABA_TITULARES!r}, linha {i_cab + 1 + deslocamento}: "
+                f"Aba {ABA_TITULARES!r}, linha {numero_linha}: "
                 f"{email} não tem uid_processo nem imóvel. Preencha um dos dois "
                 "para o sync saber a qual processo o acesso pertence."
             )
 
         titulares.append(LinhaTitular(
-            numero_linha=i_cab + 1 + deslocamento,
+            numero_linha=numero_linha,
             uid_processo=uid or None,
             imovel=imovel,
             nome=valor(i_nome) or email,
             email=email,
+            email_bruto=email_bruto,
         ))
 
     return titulares

@@ -192,6 +192,21 @@ def principal() -> int:
     titulares_planilha = planilha.ler_titulares(fonte)
     uid_para_id = {u: pr["id"] for u, pr in no_banco.items()}
 
+    # A normalização do e-mail é silenciosa por natureza, e silêncio aqui é
+    # ruim: a planilha é a fonte da verdade (regra 8), então o valor ruim fica
+    # lá para sempre e volta a aparecer no próximo cadastro feito do mesmo
+    # jeito. Avisar qual célula editar é o que fecha o ciclo.
+    corrigidos = [
+        t for t in titulares_planilha
+        if t.email_bruto.strip() != t.email
+    ]
+    if corrigidos:
+        print(f"\nE-MAILS AJUSTADOS NA LEITURA ({len(corrigidos)}):")
+        for t in corrigidos:
+            print(f"  linha {t.numero_linha}: {t.email_bruto!r} -> {t.email!r}")
+        print("  O sync usa o valor da direita. Corrija a planilha para o")
+        print("  aviso parar de aparecer.")
+
     # Imóvel -> uid, para quem preencheu a aba Titulares sem o uid. Copiar um
     # UUID de 36 caracteres entre abas na mão era o passo mais propenso a erro
     # do cadastro; aqui a pessoa escreve o imóvel e o sync resolve.

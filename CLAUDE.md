@@ -112,8 +112,24 @@ terminal do Windows é cp1252. O erro falava de codec e apontava para o
 suspeito errado. `sync/__init__.py` agora força UTF-8 na saída, então o script
 mostra o problema em vez de morrer.
 
-Isso não dá erro de validação: é um e-mail sintaticamente válido. Vale a olhada
-em endereço que o técnico tenha copiado de documento formatado.
+Isso não dá erro de validação: é um e-mail sintaticamente válido.
+
+`planilha.normalizar_email` agora trata a entrada: **NFKC antes de minúsculas**
+— é o NFKC que desfaz a ligadura e o caractere de largura total; minúsculo não
+faz nada por eles, porque `ﬂ` já é minúscula. Invisíveis (zero width, soft
+hyphen) são removidos.
+
+O que não é ambíguo ele conserta; o resto **recusa**. Acento é o caso claro:
+`josé@gmail.com` e `jose@gmail.com` são caixas de duas pessoas, e tirar o
+acento por conta própria manda o link de acesso para a errada.
+
+Quando a normalização muda o endereço, o sync **imprime a linha e o antes/
+depois**. Sem isso a planilha ficaria com o valor ruim para sempre, já que ela
+é a fonte da verdade e ninguém veria motivo para editar.
+
+Revogar titular apaga a linha de `titulares`, não a conta no Auth. Corrigir um
+e-mail deixa uma conta órfã com o endereço antigo — sem titular a RLS não
+mostra nada, então é inofensiva, mas aparece na lista de usuários do painel.
 
 **A CSP tem a URL do Supabase fixa** em `netlify.toml`, em `connect-src`.
 Trocar de projeto exige mudar lá junto com `site/config.js`. Esquecer publica
