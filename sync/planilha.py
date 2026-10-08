@@ -33,6 +33,14 @@ COLUNA_UID = "uid_royal"
 # só avisa no log, que o técnico não lê.
 COLUNA_OBS = "Obs. Script"
 
+# Gravidade do aviso. O sync classifica; quem pinta é a camada da fonte, que
+# escolhe a cor. Esta separação existe para a regra não saber de RGB.
+#
+#   atencao  o cliente ENTRA; só a célula está ruim
+#   erro     o cliente NÃO entra até alguém corrigir
+NIVEL_ATENCAO = "atencao"
+NIVEL_ERRO = "erro"
+
 # Status aceitos, já normalizados. Bate com o CHECK das tabelas no banco.
 STATUS_VALIDOS = {
     "nao_iniciado", "em_andamento", "pendente",
@@ -72,6 +80,8 @@ class LinhaTitular:
     # Frase curta para a coluna "Obs. Script", escrita para o técnico da
     # Royal. None = célula do e-mail está boa.
     problema: str | None = None
+    # Gravidade do problema: NIVEL_ATENCAO, NIVEL_ERRO ou None.
+    nivel: str | None = None
     # Texto que já está na coluna de observação, para o sync escrever só o
     # que mudou em vez de reescrever a coluna toda a cada execução.
     obs_atual: str = ""
@@ -150,6 +160,7 @@ class EmailAnalisado:
     limpo: str                  # "" quando não dá para usar
     problema: str | None        # None = célula está boa
     corrigido: bool             # dá para usar, mas o texto da célula está ruim
+    nivel: str | None = None    # NIVEL_ATENCAO, NIVEL_ERRO ou None
 
     @property
     def utilizavel(self) -> bool:
@@ -189,35 +200,28 @@ def analisar_email(bruto: str) -> EmailAnalisado:
     t = t.translate(INVISIVEIS)
     t = t.strip().lower()
 
+    # Mensagens curtas de propósito: ficam numa célula de planilha, que o
+    # técnico lê de passagem. Frase longa é rolada para fora da vista e não
+    # é lida — aviso que ninguém lê não serve para nada.
     def ruim(msg: str) -> EmailAnalisado:
-        return EmailAnalisado(bruto, "", f"SEM ACESSO: {msg}", False)
+        return EmailAnalisado(bruto, "", f"SEM ACESSO: {msg}", False, NIVEL_ERRO)
 
     if not t:
-        return ruim(
-            "a célula do e-mail só tem caracteres invisíveis. Apague a célula "
-            "e digite o endereço à mão."
-        )
+        return ruim("célula só tem caracteres invisíveis. Digite o e-mail à mão.")
 
     if any(c.isspace() for c in t):
-        return ruim(
-            "o e-mail tem espaço no meio. Apague a célula e digite o endereço "
-            "à mão, sem espaços."
-        )
+        return ruim("e-mail com espaço no meio. Apague a célula e corrija.")
 
     fora = sorted({c for c in t if ord(c) > 127})
     if fora:
-        amostra = " ".join(repr(c) for c in fora)
+        amostra = " ".join(c for c in fora)
         return ruim(
-            f"o e-mail tem caractere que não existe em endereço: {amostra}. "
-            "Pode ser acento ou um símbolo parecido com letra. Apague a "
-            "célula e digite o endereço à mão, sem colar."
+            f"e-mail com caractere inválido ({amostra}). Apague a célula e "
+            "digite à mão, sem colar."
         )
 
     if not FORMATO_EMAIL.fullmatch(t):
-        return ruim(
-            "o e-mail não tem formato de endereço (falta @ ou o domínio). "
-            "Confira e digite de novo."
-        )
+        return ruim("e-mail sem @ ou sem domínio. Confira e digite de novo.")
 
     if t != bruto.strip().lower():
         # Deu para usar, mas a célula tem caractere que só parece certo. Não
@@ -225,13 +229,12 @@ def analisar_email(bruto: str) -> EmailAnalisado:
         # no próximo cadastro feito do mesmo jeito (copiando de documento).
         return EmailAnalisado(
             bruto, t,
-            f"ATENÇÃO: o e-mail tinha caractere especial, provavelmente de "
-            f"cópia de Word ou PDF. O sistema está usando {t}. Apague a "
-            f"célula e digite o endereço à mão para tirar este aviso.",
-            True,
+            f"ATENÇÃO: e-mail com caractere especial. O sistema usará {t}. "
+            "Apague a célula e corrija se necessário.",
+            True, NIVEL_ATENCAO,
         )
 
-    return EmailAnalisado(bruto, t, None, False)
+    return EmailAnalisado(bruto, t, None, False, None)
 
 
 def normalizar_email(bruto: str, onde: str = "") -> str:
@@ -594,6 +597,7 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
             email=email,
             email_bruto=email_bruto,
             problema=analise.problema,
+            nivel=analise.nivel,
             obs_atual=valor(i_obs),
         ))
 

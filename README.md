@@ -160,8 +160,11 @@ antes.
 **O sync conversa de volta pela coluna `Obs. Script`**, na aba `Titulares`.
 Quando acha problema numa linha — e-mail com caractere estranho, imóvel que não
 casa com processo nenhum, imóvel repetido em dois — escreve ali o que fazer, em
-português e sem jargão, e apaga quando o problema sai. É mão única: ninguém
-digita nessa coluna.
+uma frase, e apaga quando o problema sai. É mão única: ninguém digita nessa
+coluna.
+
+O fundo é pintado por gravidade: **âmbar** quando o cliente entra e só a célula
+está ruim, **vermelho claro** quando ele não entra, branco quando limpa.
 
 Existe porque o técnico da Royal não lê log do GitHub Actions, mas abre a
 planilha todo dia. A coluna é opcional; sem ela o aviso fica só no log, e o

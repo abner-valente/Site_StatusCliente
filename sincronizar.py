@@ -332,29 +332,37 @@ def principal() -> int:
     # Log do Actions é lido por quem programa, e quem precisa corrigir a
     # célula é o técnico da Royal. A coluna "Obs. Script" é o canal que chega
     # nele: ele abre a planilha todo dia de qualquer forma.
-    obs_desejada: dict[int, str] = {t.numero_linha: "" for t in titulares_planilha}
+    # (texto, nível) por linha. Nível None = célula limpa, fundo branco.
+    obs_desejada: dict[int, tuple[str, str | None]] = {
+        t.numero_linha: ("", None) for t in titulares_planilha
+    }
     for t in titulares_planilha:
         if t.problema:
-            obs_desejada[t.numero_linha] = t.problema
+            obs_desejada[t.numero_linha] = (t.problema, t.nivel)
     for t in ambiguos:
         obs_desejada[t.numero_linha] = (
-            f"SEM ACESSO: o imóvel {t.imovel!r} aparece em mais de um "
-            "processo, então não dá para saber de qual é este titular. "
-            "Preencha a coluna uid_processo nesta linha."
+            f"SEM ACESSO: imóvel {t.imovel!r} está em mais de um processo. "
+            "Preencha o uid_processo nesta linha.",
+            planilha.NIVEL_ERRO,
         )
     for t in sem_processo:
         obs_desejada[t.numero_linha] = (
-            f"SEM ACESSO: não existe processo com o imóvel {t.imovel!r}. "
-            "Confira se o nome está igual ao da aba de fluxo — copie e cole "
-            "de lá, não redigite."
+            f"SEM ACESSO: nenhum processo com o imóvel {t.imovel!r}. "
+            "Copie e cole o nome da aba de fluxo.",
+            planilha.NIVEL_ERRO,
         )
 
     # Só o que mudou. Reescrever a coluna toda todo dia gastaria cota da API
     # e encheria o histórico de revisões da planilha de alteração sem efeito.
+    #
+    # A cor acompanha o texto em vez de ser conferida à parte: a leitura da
+    # planilha traz valores, não formatação, então não há como saber a cor
+    # atual sem uma chamada extra por execução. Consequência aceita: célula
+    # recolorida à mão só volta ao normal quando o texto mudar.
     obs_a_escrever = [
-        (t.numero_linha, obs_desejada[t.numero_linha])
+        (t.numero_linha, *obs_desejada[t.numero_linha])
         for t in titulares_planilha
-        if obs_desejada[t.numero_linha] != t.obs_atual
+        if obs_desejada[t.numero_linha][0] != t.obs_atual
     ]
 
     pendencias = len(email_ruim) + len(ambiguos) + len(sem_processo)
@@ -439,9 +447,22 @@ def principal() -> int:
         else:
             fonte.escrever_celulas(
                 planilha.ABA_TITULARES,
-                [(lin, col_obs, texto) for lin, texto in obs_a_escrever],
+                [(lin, col_obs, texto) for lin, texto, _ in obs_a_escrever],
             )
-            escritos = sum(1 for _, texto in obs_a_escrever if texto)
+            # Cor depois do texto, e falha dela não derruba a execução: o
+            # recado já está na célula, e cor é reforço. Na ordem inversa
+            # sobraria célula pintada e vazia, que assusta sem informar.
+            try:
+                fonte.colorir_celulas(
+                    planilha.ABA_TITULARES,
+                    [(lin, col_obs, nivel) for lin, _, nivel in obs_a_escrever],
+                )
+            except Exception as e:
+                print(f"  AVISO: não consegui pintar o fundo das células: {e}",
+                      file=sys.stderr)
+                print("  Os avisos foram escritos e estão legíveis, sem a cor.",
+                      file=sys.stderr)
+            escritos = sum(1 for _, texto, _ in obs_a_escrever if texto)
             limpos = len(obs_a_escrever) - escritos
             print(f"\n{planilha.COLUNA_OBS}: {escritos} aviso(s) escrito(s), "
                   f"{limpos} apagado(s).")

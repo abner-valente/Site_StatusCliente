@@ -49,18 +49,21 @@ O sistema roda às 19h e, se achar problema em alguma
 linha, escreve o recado nessa coluna. Ele apaga sozinho
 quando o problema for resolvido.
 
-Dois tipos de recado:
+A célula fica COLORIDA, e a cor diz a gravidade:
 
-  "ATENÇÃO: ..."
+  FUNDO AMARELO  -  "ATENÇÃO: ..."
       O cliente TEM acesso. Só a célula está com
       caractere estranho. Corrija quando der.
 
-  "SEM ACESSO: ..."
+  FUNDO VERMELHO  -  "SEM ACESSO: ..."
       O cliente NÃO consegue entrar. Precisa de
       correção para funcionar.
 
+  SEM COR
+      Nada pendente nessa linha.
+
 Cada recado diz o que fazer. Depois de corrigir, o aviso
-sai no dia seguinte.
+e a cor saem no dia seguinte.
 
 
 CUIDADO AO COLAR E-MAIL

@@ -142,6 +142,25 @@ ele não cria o cabeçalho sozinho — a primeira coluna livre pode ser vizinha 
 algo que o time usa, e estrutura da planilha do cliente não é nossa para
 mexer. `gerar_titulares.py` já inclui a coluna no CSV de projeto novo.
 
+**O fundo da célula é pintado por gravidade**: âmbar em `ATENÇÃO` (o cliente
+entra, só a célula está ruim), vermelho claro em `SEM ACESSO` (não entra),
+branco quando limpa. Tons claros de propósito — o recado é o *texto* dentro da
+célula, e fundo saturado com letra preta fica ilegível.
+
+Quem classifica é `planilha.NIVEL_ATENCAO`/`NIVEL_ERRO`; quem escolhe o RGB é
+`fontes.CORES_AVISO`. A regra não sabe de cor, e trocar a paleta não encosta
+na regra.
+
+A cor é escrita junto do texto, não conferida à parte: a leitura da planilha
+traz valores, não formatação, então saber a cor atual custaria uma chamada
+extra por execução. Consequência aceita — célula recolorida à mão só volta ao
+normal quando o texto mudar. Falha ao pintar não derruba o sync: o recado já
+está na célula, e cor é reforço.
+
+Mensagens são **curtas** de propósito. Elas vivem numa célula, lida de
+passagem; frase longa rola para fora da vista e não é lida. Aviso que ninguém
+lê não serve para nada.
+
 **E-mail imprestável congela o processo em vez de revogar.** Sem isso, um erro
 de digitação deixaria a linha fora de `desejados`, o sync leria como "titular
 saiu da aba" e revogaria — então um dedo errado tiraria do ar o acesso de um

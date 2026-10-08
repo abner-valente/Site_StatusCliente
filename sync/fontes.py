@@ -23,6 +23,27 @@ class FonteError(RuntimeError):
     """Problema ao ler ou escrever na planilha."""
 
 
+# Fundo das células de aviso, por nível de gravidade.
+#
+# Mora aqui, e não em planilha.py, porque é apresentação: o sync decide se a
+# linha tem "atencao" ou "erro" e esta camada escolhe o RGB. Trocar a paleta
+# não encosta na regra.
+#
+# Âmbar e vermelho claros de propósito: o técnico lê o TEXTO dentro da célula,
+# e fundo saturado com letra preta fica ilegível. Clarear o fundo mantém o
+# contraste do texto e ainda assim salta numa coluna de células brancas.
+CORES_AVISO: dict[str, dict[str, float]] = {
+    # #FFF3CD
+    "atencao": {"red": 1.0, "green": 0.953, "blue": 0.804},
+    # #F8D7DA
+    "erro": {"red": 0.973, "green": 0.843, "blue": 0.855},
+}
+
+# Célula sem aviso. Branco explícito em vez de "sem preenchimento": a API de
+# formatação não tem como dizer "volte ao padrão" numa chamada de lote.
+COR_LIMPA: dict[str, float] = {"red": 1.0, "green": 1.0, "blue": 1.0}
+
+
 class FonteDePlanilha(Protocol):
     """Contrato mínimo que o sync exige de qualquer fonte."""
 
@@ -50,6 +71,19 @@ class FonteDePlanilha(Protocol):
         minuto por usuário, e a coluna de observação toca uma célula por
         titular. Com 26 titulares, uma chamada por célula gastaria metade da
         cota numa execução que não mudou quase nada.
+        """
+        ...
+
+    def colorir_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str | None]]
+    ) -> None:
+        """Pinta o fundo das células. Cada item é (linha, coluna, nível).
+
+        `nível` é uma chave de CORES_AVISO, ou None para limpar. Quem chama
+        fala em gravidade, não em cor: a paleta é decisão desta camada.
+
+        Fonte sem suporte a formatação pode não fazer nada. O texto do aviso
+        já está na célula; a cor é reforço, não o recado.
         """
         ...
 
@@ -171,6 +205,25 @@ class FonteGoogleSheets:
             value_input_option="RAW",
         )
 
+    def colorir_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str | None]]
+    ) -> None:
+        if not celulas:
+            return
+        planilha = self._abrir()
+        planilha.worksheet(aba).batch_format([
+            {
+                "range": f"{col}{lin}",
+                "format": {
+                    "backgroundColor": CORES_AVISO.get(nivel or "", COR_LIMPA),
+                    # Quebra de linha: o aviso é uma frase, e sem isto o texto
+                    # vaza por cima das colunas vizinhas ou é cortado no meio.
+                    "wrapStrategy": "WRAP",
+                },
+            }
+            for lin, col, nivel in celulas
+        ])
+
     def descrever(self) -> str:
         return f"Google Sheets ({self.planilha_id[:6]}...{self.planilha_id[-4:]})"
 
@@ -233,6 +286,19 @@ class FonteXlsxLocal:
             wb[aba][f"{coluna}{linha}"] = valor
         wb.save(self.caminho)
         wb.close()
+
+    def colorir_celulas(
+        self, aba: str, celulas: list[tuple[int, str, str | None]]
+    ) -> None:
+        """Não faz nada nesta fonte, de propósito.
+
+        Pintar exigiria mais um load/save do openpyxl, e cada save descarta a
+        validação de dados da planilha — ver o aviso da classe. Como esta
+        fonte é só de desenvolvimento e nem recebe aviso automático (o sync
+        exige `escrita_segura`), o custo não se justifica. O texto do aviso
+        continua indo para o terminal.
+        """
+        return
 
     def descrever(self) -> str:
         return f"arquivo local ({self.caminho})"
