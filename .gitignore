@@ -63,8 +63,12 @@ desktop.ini
 saida/
 tmp/
 
-# Saida da carga inicial: lista de uids para colar na planilha
+# Qualquer coisa gerada para colar na planilha. Padrão, e não nome por nome,
+# porque esses arquivos carregam dado de cliente real e a lista por nome já
+# ficou atrás uma vez: `emails_para_colar.txt` nasceu numa recuperação de
+# emergência e o Git o viu como novo arquivo, pronto para ser commitado.
+#
+# Histórico do Git é permanente — dado commitado não sai apagando depois.
+*_para_colar.*
 uids_para_colar.txt
-
-# Saida do gerador: nomes, imoveis e e-mails de clientes
 titulares_para_colar.csv
