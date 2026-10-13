@@ -300,6 +300,11 @@ a `service_role`.
 
 Não preencha build command na interface do Netlify: isso sobrepõe o arquivo.
 
+**Pausar o site** é renomear `site/_redirects.inativo` para `_redirects` pelo
+próprio GitHub — todo endereço passa a mostrar `site/manutencao.html`. Religar
+é desfazer o nome. Passo a passo em [`docs/pausar-o-site.md`](docs/pausar-o-site.md),
+inclusive como parar a sincronização junto.
+
 Trocar de projeto do Supabase exige mudar a URL em **dois** lugares:
 `site/config.js` e o `connect-src` da CSP em `netlify.toml`. Esquecer o segundo
 publica um site que carrega bonito e falha em toda consulta.

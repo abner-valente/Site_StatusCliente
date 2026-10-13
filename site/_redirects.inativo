@@ -1,0 +1,26 @@
+# CHAVE DE PAUSA DO SITE
+#
+# Este arquivo só vale quando o nome dele é exatamente  _redirects
+# Com o sufixo .inativo, o Netlify ignora e o site fica NO AR.
+#
+#   PAUSAR   renomeie para        _redirects
+#   RELIGAR  renomeie de volta    _redirects.inativo
+#
+# Passo a passo pelo GitHub, sem terminal: docs/pausar-o-site.md
+#
+# Renomear em vez de editar o netlify.toml de propósito: errar o nome deixa o
+# site no ar, que é o lado seguro de errar. Errar a sintaxe do TOML quebraria
+# a configuração inteira, inclusive os cabeçalhos de segurança.
+#
+# A regra abaixo manda TODOS os caminhos para a página de manutenção, com o
+# conteúdo dela e status 200. O "!" força a regra mesmo onde existe arquivo —
+# sem ele, /index.html seria servido normalmente e o cliente entraria no site.
+#
+# Isso inclui o CSS, o JS e o logo, que passam a receber HTML. É por isso que
+# manutencao.html não depende de nenhum deles.
+#
+# O que isto NÃO faz: parar o banco e a sincronização. O Supabase continua
+# respondendo a quem tiver token válido, e o cron continua rodando às 22h UTC.
+# Para pausar o sync também, veja o documento.
+
+/*  /manutencao.html  200!

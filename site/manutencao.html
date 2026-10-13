@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Em manutenção · Royal Imóveis</title>
+<meta name="robots" content="noindex">
+
+<!-- Esta página é AUTOSSUFICIENTE de propósito: todo o CSS é inline e não há
+     imagem nem script externo.
+
+     Quando o site está pausado, a regra do _redirects manda TODOS os caminhos
+     para cá — inclusive /assets/app.css e /assets/royal-logo.png. Um <link>
+     para o CSS receberia esta mesma página HTML de volta, e a tela sairia sem
+     estilo nenhum. Por isso a marca é texto, não o PNG de 89 KB.
+
+     A CSP do netlify.toml permite style-src 'unsafe-inline', então o <style>
+     abaixo roda. Fonte externa continua funcionando: fonts.googleapis.com é
+     outro domínio e não passa pela regra do Netlify. Mesmo assim há fallback
+     de sistema, para a página não depender dela. -->
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500&family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+
+<style>
+  :root{
+    color-scheme: dark;
+    --navy-950:#060D18;
+    --navy-900:#0A1626;
+    --navy-800:#102640;
+    --cream:#F5F1E6;
+    --slate:#93A1B8;
+    --slate-dim:#7C8AA3;
+    --gold:#D4AF37;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--navy-950);
+    color:var(--cream);
+    font-family:"Manrope",system-ui,sans-serif;
+    min-height:100vh;
+    display:flex;align-items:center;justify-content:center;
+    padding:28px 20px 60px;
+  }
+  .cartao{
+    width:100%;max-width:440px;
+    background:var(--navy-900);
+    border:1px solid var(--navy-800);
+    border-radius:8px;
+    padding:36px 32px 30px;
+    box-shadow:0 1px 2px rgba(0,0,0,.4), 0 10px 30px -14px rgba(0,0,0,.7);
+  }
+
+  /* Marca em texto. Mesma tipografia do site, sem depender do arquivo. */
+  .marca{margin-bottom:28px;}
+  .marca .nome{
+    font-family:"Fraunces",Georgia,serif;
+    font-size:27px;font-weight:500;color:var(--gold);
+    letter-spacing:.07em;line-height:1;
+  }
+  .marca .sub{
+    font-size:10.5px;font-weight:700;color:var(--slate-dim);
+    letter-spacing:.22em;text-transform:uppercase;margin-top:7px;
+  }
+
+  h1{
+    font-family:"Fraunces",Georgia,serif;
+    font-size:24px;font-weight:500;margin:0 0 12px;
+  }
+  p{font-size:14.5px;color:var(--slate);margin:0 0 16px;line-height:1.65;}
+  p:last-of-type{margin-bottom:0;}
+  .selo{
+    display:inline-block;margin-bottom:20px;
+    font-size:10px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;
+    padding:5px 11px;border-radius:999px;
+    background:rgba(212,175,55,.12);color:var(--gold);
+    border:1px solid rgba(212,175,55,.35);
+  }
+  .nota{
+    margin-top:26px;padding-top:18px;
+    border-top:1px solid var(--navy-800);
+    font-size:12.5px;color:var(--slate-dim);line-height:1.65;
+  }
+</style>
+</head>
+<body>
+
+<div class="cartao">
+  <div class="marca">
+    <div class="nome">Royal</div>
+    <div class="sub">Imóveis RJ</div>
+  </div>
+
+  <span class="selo">Em manutenção</span>
+
+  <h1>Voltamos em breve</h1>
+
+  <p>
+    A área de acompanhamento está temporariamente fora do ar para manutenção.
+    Nenhum dado da sua negociação foi perdido.
+  </p>
+
+  <p>
+    Tente novamente mais tarde. Se precisar de alguma informação agora, fale
+    com o seu corretor.
+  </p>
+
+  <div class="nota">
+    Seu acesso continua válido. Quando o site voltar, entre pelo mesmo
+    endereço, com o mesmo e-mail.
+  </div>
+</div>
+
+</body>
+</html>

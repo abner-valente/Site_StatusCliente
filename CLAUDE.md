@@ -173,6 +173,20 @@ vez de descartá-la: é o que permite ao sync saber que o processo tem pendênci
 descartada com aviso no terminal — gravar e-mail vazio criaria titular que
 nunca entra.
 
+**A pausa do site é o nome de um arquivo.** `site/_redirects.inativo` vira
+`_redirects` e todo caminho passa a servir `site/manutencao.html`. Renomear, e
+não editar o `netlify.toml`, porque errar o nome deixa o site no ar — o lado
+seguro de errar — enquanto errar a sintaxe do TOML derrubaria junto os
+cabeçalhos de segurança e o `connect-src`.
+
+Com a pausa ligada, a regra pega **tudo**, inclusive `/assets/app.css` e o
+logo, que passam a receber HTML. Por isso `manutencao.html` tem o CSS inline e
+a marca em texto: página de manutenção que depende de arquivo externo aparece
+sem estilo justamente quando está em uso.
+
+Pausar o site **não** fecha o Supabase nem para o sync. Roteiro completo, com o
+`SYNC_HABILITADO`, em [`docs/pausar-o-site.md`](docs/pausar-o-site.md).
+
 **A CSP tem a URL do Supabase fixa** em `netlify.toml`, em `connect-src`.
 Trocar de projeto exige mudar lá junto com `site/config.js`. Esquecer publica
 um site que carrega bonito e falha em toda consulta.
