@@ -57,6 +57,7 @@ declare
   n_tit_compra1   int;
   n_tit_vended    int;
   n_tit_corret    int;
+  n_corret_alheio int;
   n_duplo         int;
 
   v_erro    text := null;
@@ -123,10 +124,23 @@ begin
     select count(*) into n_proc_corret
       from public.processos where uid_planilha like 'TESTEPAPEL-%';
 
-    -- Dos titulares, vê só os de papel corretor: ele mesmo, nos dois
-    -- processos. Não vê o casal comprador nem o vendedor.
+    -- Dos titulares, vê os de papel corretor nos dois processos. São TRÊS,
+    -- não duas: o processo B tem dois corretores — ele mesmo e o `Duplo`,
+    -- inserido acima para provar a chave (processo, email, papel).
+    --
+    -- Três é o comportamento desejado. Dois corretores no mesmo processo são
+    -- colegas da mesma imobiliária, e se verem é o mesmo caso do casal
+    -- comprador. Se a política estivesse quebrada o número seria SETE, todas
+    -- as linhas dos dois processos.
     select count(*) into n_tit_corret
       from public.titulares where processo_id in (v_proc_a, v_proc_b);
+
+    -- A propriedade de segurança, afirmada direto em vez de inferida da
+    -- contagem acima: nenhuma linha de outro papel aparece. É esta que
+    -- impede o e-mail do comprador e do vendedor de vazarem para o corretor.
+    select count(*) into n_corret_alheio
+      from public.titulares
+     where processo_id in (v_proc_a, v_proc_b) and papel <> 'corretor';
 
     -- =====================================================================
     -- Identidade do VENDEDOR
@@ -194,9 +208,13 @@ begin
      coalesce(n_tit_vended::text, 'erro'),
      case when n_tit_vended = 1 then 'PASSOU' else 'FALHOU' end),
 
-    ('7. corretor vê só a si mesmo, nos 2 processos', '2',
+    ('7. corretor vê os 3 corretores dos 2 processos', '3',
      coalesce(n_tit_corret::text, 'erro'),
-     case when n_tit_corret = 2 then 'PASSOU' else 'FALHOU' end),
+     case when n_tit_corret = 3 then 'PASSOU' else 'FALHOU' end),
+
+    ('7b. corretor não vê titular de outro papel', '0',
+     coalesce(n_corret_alheio::text, 'erro'),
+     case when n_corret_alheio = 0 then 'PASSOU' else 'FALHOU' end),
 
     ('8. mesmo e-mail com 2 papéis é aceito', '2',
      coalesce(n_duplo::text, 'erro'),
