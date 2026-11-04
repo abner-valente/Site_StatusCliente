@@ -35,6 +35,8 @@ PREENCHER:
 
 OPCIONAL:
   nome ........................ se vazio, aparece o e-mail
+  papel ....................... vazio = comprador. Veja a
+                                seção CORRETOR E VENDEDOR
 
 DEIXAR EM BRANCO:
   uid_processo ................ o sistema preenche sozinho
@@ -92,6 +94,45 @@ Duas linhas na aba Titulares:
 
 Se os dois usam a mesma caixa de e-mail, repita o mesmo
 endereço nas duas linhas. Cada um recebe o próprio link.
+
+
+CORRETOR E VENDEDOR
+-------------------
+Não são clientes, e não têm aba própria. São LINHAS a
+mais na aba Titulares, no mesmo processo.
+
+Para dar acesso ao corretor de um imóvel:
+  - uma linha nova
+  - mesmo imóvel (ou mesmo uid_processo)
+  - coluna papel .... corretor
+  - e-mail dele
+
+Para o vendedor, igual, com papel ... vendedor
+
+A coluna papel aceita três palavras, e só:
+
+  (vazio) ..... comprador, é o padrão
+  cliente ..... o mesmo que vazio
+  corretor .... vê todos os processos no nome dele
+  vendedor .... vê todos os processos no nome dele
+
+Qualquer outra palavra o sistema RECUSA. A pessoa não
+entra, e o aviso aparece na coluna "Obs. Script".
+Isso é de propósito: o papel decide quem vê o e-mail
+de quem, e errar ali mostra endereço de uma pessoa
+para quem não devia ver.
+
+O que cada um vê: corretor e vendedor veem a MESMA tela
+do comprador, inteira. A diferença é só quantos
+processos aparecem.
+
+Quem compartilha papel no mesmo processo vê o e-mail do
+outro — o casal comprador, por exemplo. Comprador e
+vendedor NÃO veem o e-mail um do outro.
+
+A mesma pessoa pode ter dois papéis no mesmo processo.
+Corretor da Royal que compra pela própria Royal são
+duas linhas, mesmo e-mail, papéis diferentes.
 
 
 ATENÇÃO AO NOME DO IMÓVEL

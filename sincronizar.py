@@ -226,7 +226,7 @@ def principal() -> int:
     ambiguos, sem_processo = [], []
 
     desejados: dict[tuple[str, str], dict] = {}
-    email_ruim: list = []
+    linhas_ruins: list = []
 
     # Processos com alguma linha pendente na aba Titulares. O acesso que já
     # existe neles fica congelado até o técnico resolver — ver o porquê junto
@@ -249,21 +249,26 @@ def principal() -> int:
                 sem_processo.append(t)
                 continue
 
-        # E-mail que não dá para usar não vira acesso, mas também não pode
-        # fazer o processo perder o que já tem: a linha existe, o titular
-        # existe, só o texto da célula está ruim.
+        # Célula que não dá para usar — e-mail imprestável ou papel que não
+        # existe — não vira acesso, mas também não pode fazer o processo
+        # perder o que já tem: a linha existe, o titular existe, só o texto
+        # da célula está ruim.
         if not t.email:
-            email_ruim.append(t)
+            linhas_ruins.append(t)
             protegidos.add(uid)
             continue
 
         # Indexado por UID, não pelo id do banco: processo criado nesta mesma
         # execução ainda não tem id, e o titular dele seria descartado — que é
         # justamente o caso do cadastro de cliente novo numa passada só.
-        chave = (uid, t.email)
+        # O papel entra na chave porque a mesma pessoa pode ter dois no mesmo
+        # processo — corretor da Royal que compra pela própria Royal. São dois
+        # acessos distintos, e a chave única do banco espelha isto.
+        chave = (uid, t.email, t.papel)
         anterior = desejados.get(chave)
         if anterior is None:
-            desejados[chave] = {"uid": uid, "nome": t.nome, "email": t.email}
+            desejados[chave] = {"uid": uid, "nome": t.nome,
+                                "email": t.email, "papel": t.papel}
         elif t.nome not in anterior["nome"].split(" / "):
             anterior["nome"] = f"{anterior['nome']} / {t.nome}"
 
@@ -290,13 +295,16 @@ def principal() -> int:
             continue
 
         for t in no_banco_titulares.get(pid, []):
-            if (uid, (t.get("email") or "").lower()) not in desejados:
+            atual = (uid, (t.get("email") or "").lower(),
+                     t.get("papel") or planilha.PAPEL_PADRAO)
+            if atual not in desejados:
                 a_remover.append(t)
 
     # Quem ainda não tem acesso. Reportar só as revogações seria assimétrico:
     # quem confere o plano precisa ver as duas pontas antes de aplicar.
     ja_existentes = {
-        (id_para_uid.get(pid), (t.get("email") or "").lower())
+        (id_para_uid.get(pid), (t.get("email") or "").lower(),
+         t.get("papel") or planilha.PAPEL_PADRAO)
         for pid, lista in no_banco_titulares.items() for t in lista
     }
     a_criar = [d for chave, d in desejados.items() if chave not in ja_existentes]
@@ -307,13 +315,14 @@ def principal() -> int:
         print()
         print(f"ACESSOS A CRIAR ({len(a_criar)}):")
         for d in a_criar:
-            print(f"  {d['email']:34} {d['nome']}")
+            print(f"  {d['papel']:9} {d['email']:34} {d['nome']}")
 
     if a_remover:
         print()
         print(f"ACESSOS A REVOGAR ({len(a_remover)}):")
         for t in a_remover:
-            print(f"  {t['email']:34} {t['nome']}")
+            papel = t.get("papel") or planilha.PAPEL_PADRAO
+            print(f"  {papel:9} {t['email']:34} {t['nome']}")
 
     for t in ambiguos:
         print(f"  IMÓVEL AMBÍGUO em Titulares linha {t.numero_linha} "
@@ -323,10 +332,15 @@ def principal() -> int:
         print(f"  SEM PROCESSO em Titulares linha {t.numero_linha} "
               f"({t.email_bruto}): não achei processo com o imóvel "
               f"{t.imovel!r}.")
-    for t in email_ruim:
-        print(f"  E-MAIL INVÁLIDO em Titulares linha {t.numero_linha}: "
-              f"{t.email_bruto!r} — sem acesso para esta pessoa. O acesso que "
-              f"já existia no processo foi mantido.")
+    for t in linhas_ruins:
+        # Usa o próprio `problema` em vez de uma frase fixa: é o mesmo texto
+        # que vai para a coluna Obs. Script, e agora a linha pode estar ruim
+        # por e-mail ou por papel. Frase fixa diria "e-mail inválido" para um
+        # papel digitado errado e mandaria o técnico olhar a célula errada.
+        detalhe = (t.problema or "sem acesso").removeprefix("SEM ACESSO: ")
+        print(f"  LINHA PENDENTE em Titulares linha {t.numero_linha} "
+              f"({t.email_bruto}): {detalhe} O acesso que já existia no "
+              f"processo foi mantido.")
 
     # ---- recado na planilha -------------------------------------------
     # Log do Actions é lido por quem programa, e quem precisa corrigir a
@@ -365,7 +379,7 @@ def principal() -> int:
         if obs_desejada[t.numero_linha][0] != t.obs_atual
     ]
 
-    pendencias = len(email_ruim) + len(ambiguos) + len(sem_processo)
+    pendencias = len(linhas_ruins) + len(ambiguos) + len(sem_processo)
 
     # ---- defesa 3: guarda de sanidade ---------------------------------
     try:
@@ -509,7 +523,8 @@ def principal() -> int:
             print(f"  AVISO: {d['email']} aponta para um processo que não existe")
             continue
         registros_titulares.append(
-            {"processo_id": pid, "nome": d["nome"], "email": d["email"]})
+            {"processo_id": pid, "nome": d["nome"], "email": d["email"],
+             "papel": d["papel"]})
 
     banco.gravar_titulares(sb, registros_titulares)
     banco.remover_titulares(sb, [t["id"] for t in a_remover])

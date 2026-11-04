@@ -170,6 +170,20 @@ Existe porque o técnico da Royal não lê log do GitHub Actions, mas abre a
 planilha todo dia. A coluna é opcional; sem ela o aviso fica só no log, e o
 sync avisa que ela falta.
 
+**Três entidades, uma tabela.** A coluna `papel` da aba `Titulares` aceita
+`cliente`, `corretor` e `vendedor`; vazia conta como `cliente`. Corretor e
+vendedor não têm aba nem tela própria — são **linhas a mais no mesmo
+processo**, com o mesmo imóvel (ou o mesmo `uid_processo`) e o papel trocado.
+O corretor vê todos os processos no nome dele, o vendedor também, e os dois
+veem a mesma tela do comprador.
+
+Papel fora dessas três palavras **não vira cliente**: a linha fica sem acesso
+e o aviso vai para a `Obs. Script`. O papel decide quem lê o e-mail de quem,
+então errar ali não é um rótulo torto, é um endereço exposto.
+
+A coluna é opcional como a `Obs. Script`: sem ela, tudo é lido como cliente e
+o sync roda como antes de ela existir.
+
 ---
 
 ### `provisionar_acessos.py` — auditar o acesso
@@ -349,6 +363,8 @@ royal-imoveis-acompanhamento.html   protótipo, referência de layout, não publ
 | | Depende de |
 | --- | --- |
 | Divulgar o link aos clientes | **e-mails reais dos titulares** (hoje são de teste) |
+| Acesso dos 10 corretores | **os e-mails deles** — as linhas já existem, com `email` em branco |
+| Acesso de 12 vendedores | levantar quem vendeu nos 12 processos que faltam |
 | Domínio próprio no site | apontar `processosroyal.com.br` para o Netlify (opcional) |
 
 O resto está no ar: banco, site, e-mail por SMTP próprio no Resend e

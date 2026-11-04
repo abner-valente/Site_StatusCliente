@@ -132,8 +132,14 @@ def gravar_historico(sb, registros: list[dict]) -> None:
 def gravar_titulares(sb, registros: list[dict]) -> None:
     if not registros:
         return
+    # on_conflict TEM de espelhar a chave única da tabela. A migração 700
+    # trocou (processo_id, email) por (processo_id, email, papel), porque o
+    # corretor que compra pela própria Royal é corretor e cliente do mesmo
+    # processo — duas linhas, mesmo e-mail. Fora de sincronia, o Postgres
+    # recusa com "no unique or exclusion constraint matching the ON CONFLICT
+    # specification" e nenhum titular é gravado.
     sb.table("titulares").upsert(
-        registros, on_conflict="processo_id,email"
+        registros, on_conflict="processo_id,email,papel"
     ).execute()
 
 
@@ -152,7 +158,7 @@ def titulares_por_processo(sb) -> dict[str, list[dict]]:
 
     Serve para o gerador da aba Titulares não propor de novo quem já existe.
     """
-    r = sb.table("titulares").select("id, processo_id, nome, email").execute()
+    r = sb.table("titulares").select("id, processo_id, nome, email, papel").execute()
     mapa: dict[str, list[dict]] = {}
     for linha in (r.data or []):
         mapa.setdefault(linha["processo_id"], []).append(linha)

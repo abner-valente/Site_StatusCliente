@@ -33,6 +33,21 @@ COLUNA_UID = "uid_royal"
 # só avisa no log, que o técnico não lê.
 COLUNA_OBS = "Obs. Script"
 
+# Coluna da aba Titulares que diz o que a pessoa é naquele processo.
+#
+# Corretor e vendedor entram como LINHAS desta aba, não como tabela nova:
+# `titulares` sempre foi, na prática, "quem pode ver este processo", e
+# `processos_do_titular()` nunca soube de papel nenhum. A RLS fica intocada,
+# e é ela o único lugar onde um bug mostraria dado de outra pessoa.
+#
+# Opcional, como a Obs. Script: sem a coluna, tudo é lido como cliente e o
+# sync roda exatamente como antes dela existir. É o que permite aplicar a
+# migração 700 hoje e o técnico criar a coluna quando puder.
+COLUNA_PAPEL = "papel"
+
+PAPEL_PADRAO = "cliente"
+PAPEIS_VALIDOS = ("cliente", "corretor", "vendedor")
+
 # Gravidade do aviso. O sync classifica; quem pinta é a camada da fonte, que
 # escolhe a cor. Esta separação existe para a regra não saber de RGB.
 #
@@ -72,6 +87,9 @@ class LinhaTitular:
     imovel: str                # alternativa ao uid, mais fácil de digitar
     nome: str
     email: str
+    # cliente, corretor ou vendedor. Célula vazia conta como cliente, que é o
+    # que mantém as linhas anteriores à coluna valendo sem ninguém editá-las.
+    papel: str = PAPEL_PADRAO
     # O texto exatamente como está na célula. Guardado porque quando a
     # normalização muda o endereço, a planilha segue com o valor ruim — e a
     # planilha é a fonte da verdade (regra 8). O sync usa isto para avisar
@@ -254,6 +272,36 @@ def normalizar_email(bruto: str, onde: str = "") -> str:
     # erro, então ganha a localização e o valor cru entre aspas.
     detalhe = r.problema.removeprefix("SEM ACESSO: ")
     raise PlanilhaError(f"E-mail{local} {bruto!r}: {detalhe}")
+
+
+def analisar_papel(bruto: str) -> tuple[str, str | None]:
+    """Devolve (papel, problema). Célula vazia é cliente, sem reclamação.
+
+    Papel que não existe **não** é tratado como cliente. Parece a saída
+    gentil, e é a errada: o papel decide quem vê o e-mail de quem na política
+    de RLS, então um `vendedo` digitado errado jogaria o vendedor no grupo dos
+    compradores e os endereços ficariam visíveis entre si. Quem negocia um
+    imóvel entre si não precisa trocar e-mail por aqui.
+
+    Recusar deixa o processo em `protegidos`, de modo que o acesso que já
+    funcionava continua de pé até alguém corrigir a célula.
+
+    Não levanta erro, pelo mesmo motivo de `analisar_email`: uma célula ruim
+    não pode matar o sync inteiro, senão o aviso que pediria a correção nunca
+    chegaria à planilha.
+    """
+    t = (bruto or "").strip()
+    if not t:
+        return PAPEL_PADRAO, None
+
+    papel = normalizar_rotulo(t)
+    if papel in PAPEIS_VALIDOS:
+        return papel, None
+
+    return PAPEL_PADRAO, (
+        f"SEM ACESSO: papel '{t}' não existe. "
+        f"Use {', '.join(PAPEIS_VALIDOS)} ou deixe vazio."
+    )
 
 
 def normalizar_data(bruto: str) -> str | None:
@@ -543,6 +591,11 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
 
     A segunda existe porque copiar um UUID entre abas era o passo mais
     propenso a erro do cadastro de cliente novo.
+
+    A coluna `papel` diz o que a pessoa é naquele processo. Corretor e vendedor
+    são LINHAS a mais no mesmo processo — repete-se o uid (ou o imóvel) e
+    troca-se o papel. Célula vazia é cliente, e a coluna toda é opcional: sem
+    ela, tudo é lido como cliente e o sync roda como antes de ela existir.
     """
     try:
         linhas = fonte.ler_aba(ABA_TITULARES)
@@ -559,6 +612,7 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
     i_email = colunas.get("email")
     i_imovel = colunas.get("imovel / empreendimento", colunas.get("imovel"))
     i_obs = colunas.get(normalizar_rotulo(COLUNA_OBS))
+    i_papel = colunas.get(normalizar_rotulo(COLUNA_PAPEL))
 
     titulares: list[LinhaTitular] = []
     for deslocamento, linha in enumerate(linhas[i_cab + 1:], start=1):
@@ -580,6 +634,16 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
         # acesso que ainda funciona.
         analise = analisar_email(email_bruto)
         email = analise.limpo
+        problema, nivel = analise.problema, analise.nivel
+
+        papel, problema_papel = analisar_papel(valor(i_papel))
+        if problema_papel:
+            # Sem acesso, como no e-mail imprestável. A célula do e-mail tem
+            # precedência na mensagem porque é o problema mais fundamental —
+            # e a observação na planilha é uma frase curta, não um relatório.
+            email = ""
+            if not problema:
+                problema, nivel = problema_papel, NIVEL_ERRO
 
         uid, imovel = valor(i_uid), valor(i_imovel)
         if not uid and not imovel:
@@ -595,9 +659,10 @@ def ler_titulares(fonte) -> list[LinhaTitular]:
             imovel=imovel,
             nome=valor(i_nome) or email or email_bruto,
             email=email,
+            papel=papel,
             email_bruto=email_bruto,
-            problema=analise.problema,
-            nivel=analise.nivel,
+            problema=problema,
+            nivel=nivel,
             obs_atual=valor(i_obs),
         ))
 

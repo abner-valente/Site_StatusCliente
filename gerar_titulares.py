@@ -93,6 +93,10 @@ def principal() -> int:
                 linhas_csv.append({
                     "uid_processo": p.uid,
                     "nome": nome,
+                    # Estas linhas vêm do campo Cliente da aba de fluxo, então
+                    # são compradores. Corretor e vendedor são linhas a mais,
+                    # acrescentadas à mão depois — este script não os adivinha.
+                    "papel": planilha.PAPEL_PADRAO,
                     "email": "",
                     "imovel": p.imovel,
                     "cliente_planilha": p.cliente_bruto,
@@ -117,8 +121,8 @@ def principal() -> int:
         # A coluna de observação vai vazia: quem escreve nela é o sync. Vir no
         # cabeçalho desde o início evita que a aba nasça sem ela e o aviso de
         # célula malpreenchida fique só no log, onde o técnico não olha.
-        campos = ["uid_processo", "nome", "email", "imovel", "cliente_planilha",
-                  planilha.COLUNA_OBS]
+        campos = ["uid_processo", "nome", planilha.COLUNA_PAPEL, "email",
+                  "imovel", "cliente_planilha", planilha.COLUNA_OBS]
         escritor = csv.DictWriter(f, fieldnames=campos, delimiter=";")
         escritor.writeheader()
         escritor.writerows(linhas_csv)
@@ -139,9 +143,15 @@ def principal() -> int:
     print("  3. copie tudo e cole numa aba nova chamada 'Titulares', na célula A1")
     print("  4. rode carga_inicial.py --aplicar para levar ao banco")
     print()
-    print("O sync lê as colunas uid_processo, nome e email pelo nome do")
+    print("O sync lê as colunas uid_processo, nome, papel e email pelo nome do")
     print("cabeçalho. As colunas imovel e cliente_planilha existem só para")
     print("ajudar quem preenche, e são ignoradas.")
+    print()
+    print(f"A coluna {planilha.COLUNA_PAPEL!r} aceita "
+          f"{', '.join(planilha.PAPEIS_VALIDOS)}. Vazia conta como "
+          f"{planilha.PAPEL_PADRAO}.")
+    print("Corretor e vendedor são LINHAS a mais no mesmo processo: repita o")
+    print("uid_processo (ou o imóvel) e troque o papel.")
     print()
     print(f"A coluna {planilha.COLUNA_OBS!r} é mão única: o sync escreve ali")
     print("quando acha problema numa linha, e apaga quando o problema sai.")

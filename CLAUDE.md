@@ -61,6 +61,16 @@ estiver na aba `Titulares`. Trocar o e-mail de um cliente é **editar a planilha
 e rodar o sync** — nunca o contrário. Mexer só no banco gera uma hora de
 confusão, porque funciona até a sincronização seguinte.
 
+**9. Papel não é rótulo: ele decide quem lê o e-mail de quem.** A tabela
+`titulares` guarda as três entidades do negócio — `cliente`, `corretor`,
+`vendedor` — e a política de RLS mostra a cada um apenas os titulares do
+**mesmo papel** no mesmo processo. Comprador e vendedor negociam entre si e
+não precisam trocar endereço por aqui; casal comprador continua se vendo, que
+é o caso para o qual a política nasceu. Papel errado numa linha não é um
+rótulo errado: é o e-mail de alguém exposto a quem não deveria. Por isso
+papel que não está em `PAPEIS_VALIDOS` **não vira cliente** — vira linha sem
+acesso, com aviso na planilha.
+
 ---
 
 ## Armadilhas já pagas
@@ -173,6 +183,38 @@ vez de descartá-la: é o que permite ao sync saber que o processo tem pendênci
 descartada com aviso no terminal — gravar e-mail vazio criaria titular que
 nunca entra.
 
+**Corretor e vendedor entraram como linhas, não como tabelas.** `titulares`
+sempre foi, na prática, "quem pode ver este processo", e
+`processos_do_titular()` nunca soube de papel nenhum. Por isso a migração 700
+acrescentou **uma coluna** e nada mais: quatro das cinco políticas de RLS não
+mudaram uma vírgula. O único lugar onde um bug mostra dado de outra pessoa é a
+RLS, e ela ficou intocada.
+
+O desenho anterior — aba de diretório `nome → e-mail` e coluna `Vendedor` nas
+abas de fluxo — foi descartado quando se soube que são 15 a 20 vendedores em
+22 processos. O diretório existe para impedir que o e-mail derive quando o
+nome se repete; a um vendedor por processo não há repetição, e o casamento por
+nome seria só uma forma nova de congelar processo.
+
+A contrapartida é o e-mail do corretor digitado uma vez por processo, com
+risco de deriva. Isso é tratado como **conferência** — o sync avisa quando o
+mesmo nome aparece com dois endereços — e não como estrutura.
+
+**`on_conflict` do upsert espelha a chave única, e quebra junto com ela.** A
+700 trocou `(processo_id, email)` por `(processo_id, email, papel)`, porque o
+corretor que compra pela própria Royal é corretor e cliente do mesmo processo.
+`banco.gravar_titulares` tem a tupla escrita à mão; fora de sincronia o
+Postgres recusa com "no unique or exclusion constraint matching the ON
+CONFLICT specification" e **nenhum** titular é gravado. Mexer na chave sem
+mexer ali derruba a gravação inteira.
+
+**A coluna `papel` é opcional de propósito, e isso é o que permite aplicar a
+migração antes de mexer na planilha.** Ausente, toda linha é lida como
+cliente e o sync roda exatamente como antes. Mesmo mecanismo da `Obs. Script`.
+A ordem segura é: migração primeiro, código depois, planilha quando o técnico
+puder. O contrário — código antes da migração — quebra na hora, porque a
+consulta pede a coluna `papel`.
+
 **A pausa do site é o nome de um arquivo.** `site/_redirects.inativo` vira
 `_redirects` e todo caminho passa a servir `site/manutencao.html`. Renomear, e
 não editar o `netlify.toml`, porque errar o nome deixa o site no ar — o lado
@@ -210,7 +252,14 @@ com `--sem-provisionar` se quiser controlar esse passo à parte.
 **Cadastrar cliente novo:** numa passada na planilha, adicione a linha na aba
 de fluxo (sem uid — o sync carimba) e a linha em `Titulares`. Ali o processo
 pode ser identificado pelo **imóvel** em vez do `uid_processo`; o sync resolve
-e escreve o uid de volta. Depois, um comando:
+e escreve o uid de volta.
+
+Deixe a coluna `papel` vazia para comprador. **Corretor e vendedor são linhas
+a mais no mesmo processo**: repita o `uid_processo` (ou o imóvel), troque o
+papel e ponha o e-mail. Uma pessoa pode ter dois papéis no mesmo processo —
+corretor da Royal que compra pela própria Royal são duas linhas, dois acessos.
+
+Depois, um comando:
 
 ```bash
 python sincronizar.py            # confere o plano

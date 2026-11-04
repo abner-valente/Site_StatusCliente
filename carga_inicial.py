@@ -178,7 +178,7 @@ def principal() -> int:
             # caso de um casal que compartilha uma caixa de entrada. Sem
             # deduplicar, o upsert tenta tocar a mesma linha duas vezes na
             # mesma instrução e o Postgres recusa com o código 21000.
-            por_chave: dict[tuple[str, str], dict] = {}
+            por_chave: dict[tuple[str, str, str], dict] = {}
             orfaos, fundidos, ruins = [], [], []
 
             for t in titulares:
@@ -196,11 +196,14 @@ def principal() -> int:
                     orfaos.append(t)
                     continue
 
-                chave = (pid, t.email)
+                # O papel entra na chave para espelhar a chave única do banco,
+                # (processo_id, email, papel), posta pela migração 700.
+                chave = (pid, t.email, t.papel)
                 anterior = por_chave.get(chave)
                 if anterior is None:
                     por_chave[chave] = {
                         "processo_id": pid, "nome": t.nome, "email": t.email,
+                        "papel": t.papel,
                     }
                     continue
 
