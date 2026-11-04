@@ -1,12 +1,77 @@
-COMO CADASTRAR UM CLIENTE NOVO NA PLANILHA
-==========================================
+COMO PREENCHER A PLANILHA
+=========================
 
-São 4 campos obrigatórios. Dois em cada aba.
+Esta planilha alimenta o site onde o comprador, o corretor
+e o vendedor acompanham a negociação.
+
+O sistema lê a planilha uma vez por noite. O que você
+preencher hoje passa a valer no dia seguinte.
+
+Versão para ler no celular ou mandar por mensagem:
+  https://claude.ai/artifact/5V5n8EsmfhWCMWs6KFBL8m
+
+  Se editar este arquivo, atualize a página também — os dois
+  dizem a mesma coisa e podem divergir.
 
 
-1) ABA "Fluxo A Vista" OU "Fluxo Financiado"
---------------------------------------------
-Use a aba conforme a forma de pagamento.
+=========================================================
+AS TRÊS REGRAS QUE NÃO PODEM SER QUEBRADAS
+=========================================================
+
+1) NUNCA COLE POR CIMA DE LINHAS QUE JÁ EXISTEM
+
+   Ao colar um bloco de linhas novas, clique na PRIMEIRA
+   LINHA VAZIA, embaixo de tudo. Nunca na linha 2.
+
+   Colar em cima apaga o que estava ali. Para o sistema,
+   linha que sumiu da aba Titulares significa "essa pessoa
+   perdeu o acesso" — e ele tira todo mundo do ar.
+
+   Isso já aconteceu. Foi barrado por uma trava de
+   segurança, mas conte com a trava como último recurso,
+   não como rotina.
+
+   Antes de colar, olhe o número da última linha
+   preenchida. Clique na seguinte. Só então cole.
+
+
+2) NUNCA APAGUE UMA LINHA
+
+   Nem na aba de fluxo, nem na aba Titulares.
+
+   Negociação que acabou, caiu ou foi cancelada: fale com
+   o responsável técnico. Não apague.
+
+   Apagar linha na aba de fluxo faz o processo sumir do
+   site. Apagar na aba Titulares tira o acesso da pessoa.
+   Nos dois casos sem aviso para ninguém.
+
+
+3) DIGITE O E-MAIL À MÃO. NÃO COLE.
+
+   E-mail copiado de Word, PDF ou mensagem vem com
+   caracteres que PARECEM certos e não são.
+
+   Já aconteceu duas vezes aqui:
+
+     - um endereço veio com "ﬂ", um símbolo único no
+       lugar das letras f e l. Na tela fica idêntico.
+
+     - outro veio com "í" acentuado dentro do endereço,
+       porque o corretor automático do Word "consertou"
+       o nome da pessoa.
+
+   Nos dois casos o e-mail não existe, e o link de acesso
+   nunca chega. Olhando, não dá para descobrir.
+
+   Se precisar colar, confira a coluna "Obs. Script" no
+   dia seguinte — o sistema avisa quando encontra algo.
+
+
+=========================================================
+ABA "Fluxo A Vista" OU "Fluxo Financiado"
+=========================================================
+Escolha a aba pela forma de pagamento.
 
 PREENCHER:
   Cliente ..................... obrigatório
@@ -23,74 +88,51 @@ DEIXAR EM BRANCO:
   uid_royal ................... o sistema preenche sozinho
   ID .......................... o sistema não usa
 
+Para avançar uma etapa, troque o status na coluna dela.
+Use a lista suspensa; não digite por cima.
 
-2) ABA "Titulares"
-------------------
+
+=========================================================
+ABA "Titulares" — QUEM PODE ENTRAR NO SITE
+=========================================================
+Uma linha por PESSOA, por processo.
 
 PREENCHER:
   email ....................... obrigatório, é o login
-                                do cliente
   imovel ...................... obrigatório, IGUAL ao da
                                 aba de fluxo
 
 OPCIONAL:
   nome ........................ se vazio, aparece o e-mail
-  papel ....................... vazio = comprador. Veja a
-                                seção CORRETOR E VENDEDOR
+  papel ....................... vazio = comprador
 
 DEIXAR EM BRANCO:
   uid_processo ................ o sistema preenche sozinho
   cliente_planilha ............ só referência visual
   Obs. Script ................. o sistema escreve aqui;
-                                não digite nada
+                                NÃO digite nada
 
 
-A COLUNA "Obs. Script" — LEIA TODO DIA
---------------------------------------
-O sistema roda às 19h e, se achar problema em alguma
-linha, escreve o recado nessa coluna. Ele apaga sozinho
-quando o problema for resolvido.
+A COLUNA "papel"
+----------------
+Aceita três palavras, e só:
 
-A célula fica COLORIDA, e a cor diz a gravidade:
+  (vazio) ..... comprador, é o padrão
+  cliente ..... o mesmo que vazio
+  corretor .... vê todos os processos no nome dele
+  vendedor .... vê todos os processos no nome dele
 
-  FUNDO AMARELO  -  "ATENÇÃO: ..."
-      O cliente TEM acesso. Só a célula está com
-      caractere estranho. Corrija quando der.
+Qualquer outra palavra o sistema RECUSA: a pessoa não
+entra, e o aviso aparece na coluna "Obs. Script".
 
-  FUNDO VERMELHO  -  "SEM ACESSO: ..."
-      O cliente NÃO consegue entrar. Precisa de
-      correção para funcionar.
-
-  SEM COR
-      Nada pendente nessa linha.
-
-Cada recado diz o que fazer. Depois de corrigir, o aviso
-e a cor saem no dia seguinte.
-
-
-CUIDADO AO COLAR E-MAIL
------------------------
-E-mail copiado de Word, PDF ou mensagem pode vir com
-caractere que PARECE certo e não é.
-
-Exemplo real: um endereço veio com "ﬂ" — um símbolo
-único, em vez das letras f e l. Na tela fica idêntico.
-Para o Gmail, é outro endereço, e o cliente nunca
-receberia o link.
-
-Olhando não se descobre. Por isso:
-
-  DIGITE o e-mail à mão, não cole.
-
-Se precisar colar, o sistema avisa na coluna
-"Obs. Script" quando encontrar algo.
+Isso é de propósito. O papel decide quem enxerga o e-mail
+de quem, e errar ali mostra o endereço de uma pessoa para
+quem não devia ver.
 
 
 CASAL, OU DUAS PESSOAS NO MESMO IMÓVEL
 --------------------------------------
-Duas linhas na aba Titulares:
-  - o mesmo imóvel nas duas
-  - o e-mail de cada pessoa
+Duas linhas, mesmo imóvel, o e-mail de cada uma.
 
 Se os dois usam a mesma caixa de e-mail, repita o mesmo
 endereço nas duas linhas. Cada um recebe o próprio link.
@@ -98,8 +140,8 @@ endereço nas duas linhas. Cada um recebe o próprio link.
 
 CORRETOR E VENDEDOR
 -------------------
-Não são clientes, e não têm aba própria. São LINHAS a
-mais na aba Titulares, no mesmo processo.
+Não têm aba própria. São LINHAS a mais na aba Titulares,
+no mesmo processo.
 
 Para dar acesso ao corretor de um imóvel:
   - uma linha nova
@@ -109,49 +151,83 @@ Para dar acesso ao corretor de um imóvel:
 
 Para o vendedor, igual, com papel ... vendedor
 
-A coluna papel aceita três palavras, e só:
+O corretor que atende cinco negociações entra UMA vez em
+cada uma, com o mesmo e-mail. Ele faz um login só e vê as
+cinco.
 
-  (vazio) ..... comprador, é o padrão
-  cliente ..... o mesmo que vazio
-  corretor .... vê todos os processos no nome dele
-  vendedor .... vê todos os processos no nome dele
+Os três veem a MESMA tela. A diferença é quantos processos
+aparecem.
 
-Qualquer outra palavra o sistema RECUSA. A pessoa não
-entra, e o aviso aparece na coluna "Obs. Script".
-Isso é de propósito: o papel decide quem vê o e-mail
-de quem, e errar ali mostra endereço de uma pessoa
-para quem não devia ver.
+Quem divide o mesmo papel no mesmo processo enxerga o
+e-mail do outro — o casal comprador, por exemplo.
+Comprador e vendedor NÃO enxergam o e-mail um do outro.
 
-O que cada um vê: corretor e vendedor veem a MESMA tela
-do comprador, inteira. A diferença é só quantos
-processos aparecem.
-
-Quem compartilha papel no mesmo processo vê o e-mail do
-outro — o casal comprador, por exemplo. Comprador e
-vendedor NÃO veem o e-mail um do outro.
-
-A mesma pessoa pode ter dois papéis no mesmo processo.
-Corretor da Royal que compra pela própria Royal são
-duas linhas, mesmo e-mail, papéis diferentes.
+A mesma pessoa pode ter dois papéis no mesmo processo. Um
+corretor da Royal que compra pela própria Royal são duas
+linhas, mesmo e-mail, papéis diferentes.
 
 
-ATENÇÃO AO NOME DO IMÓVEL
--------------------------
+=========================================================
+A COLUNA "Obs. Script" — OLHE TODO DIA
+=========================================================
+É por ali que o sistema fala com você. Ele escreve quando
+acha problema e apaga sozinho quando o problema sai.
+
+Você nunca digita nessa coluna.
+
+A célula fica COLORIDA, e a cor diz a gravidade:
+
+  FUNDO AMARELO  -  "ATENÇÃO: ..."
+      A pessoa TEM acesso. Só a célula está com
+      caractere estranho. Corrija quando der.
+
+  FUNDO VERMELHO  -  "SEM ACESSO: ..."
+      A pessoa NÃO consegue entrar. Precisa de
+      correção para funcionar.
+
+  SEM COR
+      Nada pendente nessa linha.
+
+Cada recado diz o que fazer. Depois de corrigir, o aviso
+e a cor somem na noite seguinte.
+
+
+=========================================================
+NOME DO IMÓVEL
+=========================================================
 Copie e cole entre as abas. Não redigite.
 
 O sistema perdoa acento, maiúscula e espaço sobrando.
-Não perdoa "Bl 2" virar "Bloco 2" — aí ele não acha o
-processo e avisa que a linha está sem vínculo.
+
+Não perdoa "Bl 2" virar "Bloco 2", nem nome encurtado:
+"Garden Up" não acha "Garden Up Bl 1 108". Aí ele avisa
+que a linha está sem vínculo e a pessoa não entra.
 
 
-QUANDO O CLIENTE PASSA A TER ACESSO
------------------------------------
-O sistema sincroniza sozinho todo dia às 19h.
-O cliente cadastrado de manhã consegue entrar à noite.
+=========================================================
+QUANDO O ACESSO PASSA A VALER
+=========================================================
+O sistema sincroniza sozinho uma vez por noite. Quem você
+cadastrar hoje consegue entrar amanhã.
 
-Se precisar antes disso, peça para rodar a sincronização
+Se precisar antes, peça para rodarem a sincronização
 manualmente.
 
-O cliente entra pelo site, digita o e-mail cadastrado e
-recebe um link de acesso. Não existe senha, e ele não se
-cadastra sozinho — só entra quem foi cadastrado aqui.
+A pessoa entra pelo site, digita o e-mail cadastrado e
+recebe um link de acesso. Não existe senha, e ninguém se
+cadastra sozinho — só entra quem está nesta planilha.
+
+
+=========================================================
+SE ALGUÉM DISSER QUE O LINK NÃO CHEGOU
+=========================================================
+1) confira a caixa de spam da pessoa
+2) confira se o e-mail na planilha está certo, letra
+   por letra
+3) confira a coluna "Obs. Script" daquela linha
+4) se tudo parecer certo, fale com o responsável técnico
+
+A tela de login mostra "enviamos o link" mesmo quando o
+e-mail não está cadastrado. Isso é proposital, para não
+revelar quem é cliente da Royal. Então "não chegou" nunca
+vira mensagem de erro na tela.
