@@ -8,16 +8,31 @@ comprador, inteira. O recorte é de acesso ao processo, não de conteúdo.
 
 ---
 
-## A ordem importa
+## A ordem importa, e há uma janela a fechar
 
 ```
-1. migração        →  2. código       →  3. planilha      →  4. sync
-   (SQL Editor)       (já commitado)     (o técnico)         (você)
+0. desligar o sync  →  1. push  →  2. migração  →  3. testes  →  4. religar
+                                                                     │
+                    5. planilha (o técnico, sem pressa)  ←───────────┘
+                                   │
+                    6. sincronizar ┘  (você)
 ```
 
-**Migração primeiro.** O código já pede a coluna `papel` ao banco; rodar o
-sync antes de aplicar a migração falha na hora, dizendo que a coluna não
-existe.
+**Schema e código têm de trocar juntos.** `banco.gravar_titulares` faz upsert
+de **todos** os titulares em toda execução, e o `on_conflict` nomeia a chave
+única à mão. Qualquer uma das duas metades sozinha quebra o sync:
+
+| estado | o que acontece na execução noturna |
+| --- | --- |
+| migração aplicada, código antigo | `no unique or exclusion constraint matching the ON CONFLICT specification` — nenhum titular gravado |
+| código novo, migração não aplicada | a consulta pede a coluna `papel`, que não existe |
+
+A sincronização roda sozinha toda noite, então a janela entre os dois passos
+não pode pegar uma execução. **Desligue o sync antes e religue depois** — o
+mecanismo já existe e não exige mexer em código.
+
+**Pausar o site não para o sync.** São coisas separadas; se o site estiver
+pausado, o sync continua rodando.
 
 **Planilha por último, e sem pressa.** A coluna `papel` é opcional: enquanto
 ela não existir, toda linha é lida como `cliente` e o sync roda exatamente
@@ -26,7 +41,28 @@ vendedor, e a rodada do dia seguinte pega o que o técnico preencheu.
 
 ---
 
-## 1. Aplicar a migração
+## 0. Desligar o sync
+
+No repositório: **Settings → Secrets and variables → Actions**, aba
+**Variables**. Ponha `SYNC_HABILITADO` com o valor `0` (crie se não existir).
+
+A execução diária continua acontecendo, sai sem gravar nada e termina verde,
+com esta linha no log:
+
+```
+SYNC DESLIGADO por SYNC_HABILITADO no ambiente.
+```
+
+## 1. Publicar o código
+
+```bash
+git push
+```
+
+O GitHub Actions roda o código que está no repositório, não o da sua máquina.
+Sem o push, a execução noturna usa a versão antiga.
+
+## 2. Aplicar a migração
 
 Painel do Supabase → **SQL Editor** → colar inteiro e executar:
 
@@ -42,7 +78,7 @@ política ou o `grant` não estiverem no lugar, ele **levanta erro** em vez de
 deixar passar. Ao final mostra a contagem de titulares por papel — devem estar
 todos como `cliente`.
 
-## 2. Rodar o teste
+## 3. Rodar os testes
 
 Mesmo SQL Editor:
 
@@ -59,7 +95,23 @@ Os testes não são migrações e não entram na ordem numérica.
 quem-vê-quem; o 02 é o teste que prova que o processo A não enxerga o processo
 B, e precisa continuar passando.
 
-## 3. Criar a coluna `papel` na planilha
+## 4. Religar o sync
+
+Com migração e código já de acordo, a janela está fechada. Volte
+`SYNC_HABILITADO` para `1` (ou apague a variável — sem ela, o padrão é
+ligado).
+
+Antes de religar, vale uma conferência local:
+
+```bash
+python sincronizar.py
+```
+
+Simula, sem gravar. Tem de sair sem erro, com `titulares` todos como
+`cliente` e nenhum acesso a criar ou revogar — o estado é o mesmo de antes,
+só o schema mudou.
+
+## 5. Criar a coluna `papel` na planilha
 
 Na aba `Titulares`, **insira uma coluna à esquerda de `Obs. Script`** e
 escreva no cabeçalho:
@@ -68,7 +120,7 @@ escreva no cabeçalho:
 papel
 ```
 
-A posição importa porque colar é posicional, e o arquivo do passo 4 foi gerado
+A posição importa porque colar é posicional, e o arquivo do passo 6 foi gerado
 nessa ordem:
 
 ```
@@ -81,7 +133,7 @@ só o sync escreve.
 As 32 linhas que já existem ficam com `papel` vazio, e vazio conta como
 comprador. Nenhuma precisa ser editada.
 
-## 4. Colar as linhas novas
+## 6. Colar as linhas novas
 
 Abra `papeis_para_colar.csv` e cole as 38 linhas abaixo da última linha
 existente da aba.
@@ -103,7 +155,7 @@ Linha com e-mail em branco é **ignorada** pelo sync. As 22 de corretor não
 criam acesso nenhum até alguém preencher o endereço — são uma lista de tarefa
 no lugar certo.
 
-## 5. Preencher os e-mails dos corretores
+## 7. Preencher os e-mails dos corretores
 
 São 10 pessoas em 22 linhas, então o mesmo endereço se repete.
 
@@ -121,7 +173,7 @@ Uma linha pede atenção: um processo tem `Thiago/Nilton` na coluna `Corretor`
 da aba de fluxo. Se forem duas pessoas, viram **duas linhas** de corretor,
 uma para cada e-mail.
 
-## 6. Sincronizar
+## 8. Sincronizar
 
 ```bash
 python sincronizar.py
@@ -169,7 +221,7 @@ Conforme forem levantados, são linhas novas na aba `Titulares` com
 
 ## Desfazer
 
-**Antes do passo 6**, nada foi para o banco: apagar as linhas coladas na
+**Antes do passo 8**, nada foi para o banco: apagar as linhas coladas na
 planilha basta.
 
 **Depois**, para remover o acesso de corretor e vendedor sem desfazer a
