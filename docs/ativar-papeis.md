@@ -140,38 +140,67 @@ existente da aba.
 
 | papel | linhas | o que vem preenchido |
 | --- | --- | --- |
-| `vendedor` | 16 | e-mail pronto, `nome` em branco |
-| `corretor` | 22 | `nome` pronto, **e-mail em branco** |
+| `vendedor` | 16 | nome e e-mail prontos |
+| `corretor` | 18 | nome e e-mail prontos |
+| `corretor` | 4 | nome pronto, **e-mail em branco** |
 
-O `uid_processo` já vem resolvido em todas. Isso não é detalhe: a lista que o
-gerente passou trazia os imóveis abreviados (`Jacarepa Residentes`,
+O `uid_processo` já vem resolvido em todas. Isso não é detalhe: a lista do
+gerente trazia os imóveis abreviados (`Jacarepa Residentes`,
 `Garden Up 1 108`) e **nenhum dos dez casava** com o nome da planilha. Colados
 como estavam, nenhum vendedor entraria.
 
-`nome` em branco não é problema: o sistema usa o e-mail como nome quando a
-célula está vazia.
+Linha com e-mail em branco é **ignorada** pelo sync. As 4 linhas pendentes de
+corretor não criam acesso nenhum até alguém preencher o endereço — são uma
+lista de tarefa no lugar certo.
 
-Linha com e-mail em branco é **ignorada** pelo sync. As 22 de corretor não
-criam acesso nenhum até alguém preencher o endereço — são uma lista de tarefa
-no lugar certo.
+## 7. Resolver as 4 linhas pendentes de corretor
 
-## 7. Preencher os e-mails dos corretores
+| nome na planilha | processo | o que falta |
+| --- | --- | --- |
+| `Ana Patricícia` | Jacarepaguá Residences I Bl 2 304 | e-mail recusado; nome com erro de digitação |
+| `Thiago/Nilton` | Bourgogne Bl 2 511 | duas pessoas numa célula |
+| `João Carlos (RSantos)` | Garden Up Bl 1 108 | não está na lista de e-mails |
+| `Marcos Simões` | Life 360 Bl 2 704 | não está na lista de e-mails |
 
-São 10 pessoas em 22 linhas, então o mesmo endereço se repete.
+**Ana Patrícia.** O endereço veio como `Patríciamarinho.imoveis@gmail.com`,
+com `í` acentuado dentro da parte local. O sistema **recusa** por regra: tirar
+acento por conta própria pode mandar o link de acesso para a caixa de outra
+pessoa. O Gmail não aceita acento em endereço, então o correto é quase certo
+que seja sem — mas confirme com ela antes de digitar, não deduza. Provável
+origem: autocorreção do Word ou do celular "consertando" Patricia para
+Patrícia dentro do e-mail.
 
-**Teste com um corretor antes dos dez.** Eles usam caixa corporativa
-(`@royalimoveisrj.com.br`), hospedada na inGaia, e filtro corporativo é mais
-rígido que Gmail. Link de acesso que cai em quarentena é indistinguível de
+O nome dela na planilha está como `Ana Patricícia`, com a sílaba duplicada.
+Vale corrigir na aba de fluxo; é só rótulo, não quebra nada.
+
+**Thiago/Nilton.** Se forem duas pessoas, viram **duas linhas** de corretor no
+mesmo processo, uma para cada e-mail — o Thiago já tem o dele na lista.
+
+**Ryan e Sandra** estão na lista de e-mails mas em nenhum dos 22 processos.
+Se ainda não têm negociação em andamento, não há linha para criar: entram
+quando aparecerem numa aba de fluxo.
+
+**Teste com um corretor antes dos nove.** Filtro de caixa corporativa é mais
+rígido que Gmail, e link de acesso que cai em quarentena é indistinguível de
 login quebrado: o corretor diz "não funciona" e não há erro em lugar nenhum
-para investigar. Com um de cada vez, isso aparece numa pessoa, não em dez.
+para investigar. Com um de cada vez, isso aparece numa pessoa, não em nove.
 
-Enviar para lá não encosta no DNS da Royal — nós mandamos *de*
+Enviar não encosta no DNS da Royal — nós mandamos *de*
 `processosroyal.com.br`, com DKIM e SPF passando. Receber é problema do
-servidor deles.
+servidor de quem recebe.
 
-Uma linha pede atenção: um processo tem `Thiago/Nilton` na coluna `Corretor`
-da aba de fluxo. Se forem duas pessoas, viram **duas linhas** de corretor,
-uma para cada e-mail.
+## 7b. Dois pareamentos de vendedor para conferir
+
+Nome e e-mail parecem ser de pessoas diferentes:
+
+| imóvel | nome na lista | e-mail |
+| --- | --- | --- |
+| Vila Carioca Bl 9 104 | Rodrigo | `lucelycosta56@gmail.com` |
+| Bourgogne Bl 3 704 | Marcos | `michel.camposs33@gmail.com` |
+
+Pode ser a caixa do cônjuge, e aí está certo. Mas se for troca de linha na
+digitação, o link de acesso ao processo vai para a pessoa errada — vale uma
+olhada antes de aplicar. Os dois estão no arquivo como vieram.
 
 ## 8. Sincronizar
 
