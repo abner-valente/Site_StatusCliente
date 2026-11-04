@@ -141,8 +141,11 @@ existente da aba.
 | papel | linhas | o que vem preenchido |
 | --- | --- | --- |
 | `vendedor` | 16 | nome e e-mail prontos |
-| `corretor` | 18 | nome e e-mail prontos |
-| `corretor` | 4 | nome pronto, **e-mail em branco** |
+| `corretor` | 19 | nome e e-mail prontos |
+| `corretor` | 3 | nome pronto, **e-mail em branco** |
+
+São **23 contas de login novas**. Nenhuma mensagem sai na criação: o link de
+acesso só é enviado quando a pessoa pede, na tela de login.
 
 O `uid_processo` já vem resolvido em todas. Isso não é detalhe: a lista do
 gerente trazia os imóveis abreviados (`Jacarepa Residentes`,
@@ -153,25 +156,13 @@ Linha com e-mail em branco é **ignorada** pelo sync. As 4 linhas pendentes de
 corretor não criam acesso nenhum até alguém preencher o endereço — são uma
 lista de tarefa no lugar certo.
 
-## 7. Resolver as 4 linhas pendentes de corretor
+## 7. Resolver as 3 linhas pendentes de corretor
 
 | nome na planilha | processo | o que falta |
 | --- | --- | --- |
-| `Ana Patricícia` | Jacarepaguá Residences I Bl 2 304 | e-mail recusado; nome com erro de digitação |
 | `Thiago/Nilton` | Bourgogne Bl 2 511 | duas pessoas numa célula |
 | `João Carlos (RSantos)` | Garden Up Bl 1 108 | não está na lista de e-mails |
 | `Marcos Simões` | Life 360 Bl 2 704 | não está na lista de e-mails |
-
-**Ana Patrícia.** O endereço veio como `Patríciamarinho.imoveis@gmail.com`,
-com `í` acentuado dentro da parte local. O sistema **recusa** por regra: tirar
-acento por conta própria pode mandar o link de acesso para a caixa de outra
-pessoa. O Gmail não aceita acento em endereço, então o correto é quase certo
-que seja sem — mas confirme com ela antes de digitar, não deduza. Provável
-origem: autocorreção do Word ou do celular "consertando" Patricia para
-Patrícia dentro do e-mail.
-
-O nome dela na planilha está como `Ana Patricícia`, com a sílaba duplicada.
-Vale corrigir na aba de fluxo; é só rótulo, não quebra nada.
 
 **Thiago/Nilton.** Se forem duas pessoas, viram **duas linhas** de corretor no
 mesmo processo, uma para cada e-mail — o Thiago já tem o dele na lista.
@@ -179,6 +170,18 @@ mesmo processo, uma para cada e-mail — o Thiago já tem o dele na lista.
 **Ryan e Sandra** estão na lista de e-mails mas em nenhum dos 22 processos.
 Se ainda não têm negociação em andamento, não há linha para criar: entram
 quando aparecerem numa aba de fluxo.
+
+**O nome de Ana Patrícia está errado na aba de fluxo:** `Ana Patricícia`, com
+a sílaba duplicada. O acesso dela está resolvido — a linha no arquivo já sai
+com o nome certo e o e-mail confirmado —, mas vale corrigir na planilha, que é
+a fonte da verdade. É só rótulo e não quebra nada.
+
+O e-mail dela tinha vindo como `Patríciamarinho.imoveis@gmail.com`, com `í`
+acentuado dentro da parte local — autocorreção de Word ou de celular
+"consertando" Patricia. `analisar_email` recusou, que é o comportamento certo:
+tirar acento por conta própria pode mandar o link de acesso para a caixa de
+outra pessoa. O endereço correto foi **confirmado** em 04/11/2026, não
+deduzido.
 
 **Teste com um corretor antes dos nove.** Filtro de caixa corporativa é mais
 rígido que Gmail, e link de acesso que cai em quarentena é indistinguível de
