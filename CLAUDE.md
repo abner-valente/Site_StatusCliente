@@ -215,6 +215,26 @@ A ordem segura é: migração primeiro, código depois, planilha quando o técni
 puder. O contrário — código antes da migração — quebra na hora, porque a
 consulta pede a coluna `papel`.
 
+**Link de acesso gasto mandava o cliente para o login sem dizer nada.**
+`painel.js` via que não havia sessão e redirecionava calado. O motivo vinha na
+URL — `#error=...&error_code=otp_expired` — e ninguém lia. Quem clicava num
+link já usado caía na tela de login sem explicação, e o caminho natural dali é
+pedir outro link e repetir. Visto em produção em 05/11/2026: um corretor entrou
+às 09:45 e o link foi verificado de novo às 09:48 e às 09:54, falhando as duas
+com `One-time token not found`.
+
+Quem tem sessão viva naquele navegador não passa por isso — o painel abre
+normalmente. Dói em quem abre o e-mail no aplicativo do Gmail, cujo navegador
+embutido tem armazenamento próprio e nenhuma sessão.
+
+`otp_expired` cobre link gasto e link vencido, e daqui os dois não se
+distinguem. A mensagem fala dos dois porque a ação de quem lê é a mesma.
+
+O recado viaja em `sessionStorage`, não em parâmetro de URL: parâmetro ficaria
+no endereço que a pessoa pode favoritar, e reapareceria na visita seguinte.
+`aviso-login.js` lê o fragmento **antes** de criar o cliente do Supabase, que
+o consome e limpa a URL ao inicializar — depois disso não há mais o que ler.
+
 **A pausa do site é o nome de um arquivo.** `site/_redirects.inativo` vira
 `_redirects` e todo caminho passa a servir `site/manutencao.html`. Renomear, e
 não editar o `netlify.toml`, porque errar o nome deixa o site no ar — o lado

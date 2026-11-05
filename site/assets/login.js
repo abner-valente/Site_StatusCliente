@@ -3,6 +3,7 @@
  * sem 'unsafe-inline' em script-src, um <script> no HTML não executa.
  */
 import { criarClienteRoyal } from "./cliente.js";
+import { lerAviso } from "./aviso-login.js";
 
 const cfg = window.ROYAL_CONFIG || {};
 const form     = document.getElementById("form-login");
@@ -19,6 +20,12 @@ function limpar(){
   avisoOk.hidden = true;
   avisoErr.hidden = true;
 }
+
+// Recado deixado pelo painel quando o link de acesso falhou. Vem antes da
+// criação do cliente de propósito: erro de configuração é mais grave e
+// deve sobrescrever este.
+const avisoDoLink = lerAviso();
+if (avisoDoLink) mostrar(avisoErr, avisoDoLink);
 
 let sb;
 try {

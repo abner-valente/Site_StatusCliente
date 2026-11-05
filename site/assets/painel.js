@@ -8,6 +8,7 @@
 //
 // Com um imóvel só, ela redireciona direto para o acompanhamento.
 import { criarClienteRoyal } from "./cliente.js";
+import { motivoDoLinkNaUrl, guardarAviso } from "./aviso-login.js";
 
 const cfg = window.ROYAL_CONFIG || {};
 const app = document.getElementById("app");
@@ -25,6 +26,10 @@ function estado(titulo, texto){
   app.innerHTML = `<div class="estado"><h2>${esc(titulo)}</h2><p>${esc(texto)}</p></div>`;
 }
 
+// Lido ANTES de criar o cliente: ao inicializar, o Supabase consome o
+// fragmento da URL e o apaga. Ver aviso-login.js.
+const motivoDoLink = motivoDoLinkNaUrl();
+
 let sb;
 try {
   sb = criarClienteRoyal(cfg);
@@ -39,6 +44,10 @@ if (sb) {
   const { data: { session } } = await sb.auth.getSession();
 
   if (!session) {
+    // Sem este recado a pessoa cai no login sem explicação nenhuma, e o
+    // caminho natural dali é pedir outro link e repetir. Sessão válida
+    // não passa por aqui: link gasto com sessão viva abre o painel.
+    guardarAviso(motivoDoLink);
     location.replace("index.html");
   } else {
     // Sem filtro de titular na consulta: quem filtra é a RLS, no banco.
